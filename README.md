@@ -13,33 +13,33 @@ Kullanıcılar libre-akademi'de kursları tamamlayabilir, profillerini özelleş
 
 ## Geliştirmeye katkı sağlamak
 libre akademi'nin gelişimine katkı sağlamak isityorsanız aşağıdaki adımları takip edebilirsiniz.
-1. Depoyu Klonlamak
+
+Bu rehber, projeye katkıda bulunmak ve projeyi kendi bilgisayarında çalıştırmak için adım adım yönerge sağlar.
+
+### 1. Depoyu Klonlamak
 
 Projeyi kendi bilgisayarına almak için:
 
-git clone https://github.com/Reend21/libre-akademi.git
+```bash
+git clone https://github.com/kullanici/proje-adi.git
 cd proje-adi
-
-2. Bağımlılıkları Yüklemek
-
+```
+### 2. Bağımlılıkları Yüklemek
+```
 npm install
-
+```
 3. Geliştirme Ortamını Çalıştırmak
-
-Projeyi localde çalıştırmak için:
-
+```
 npm run serve
-
-4. Prod Build Almak
-
-Projeyi üretim ortamı için build etmek:
-
+```
+4. Build Almak
+```
 npm run build
-
+```
 5. Katkıda Bulunmak
 
 Projeye katkı sağlamak için önerilen yol şudur:
-
+```
 Yeni branch aç:
 git checkout -b ozellik-ismi
 Değişiklikleri yap.
@@ -48,8 +48,7 @@ git add .
 git commit -m "Yeni özellik eklendi: X"
 Branch’i remote’a gönder ve pull request oluştur:
 git push origin ozellik-ismi
-6. Ek Notlar
-Eğer proje .env.example dosyası içeriyorsa, bunu .env olarak kopyalayın ve gerekli API anahtarlarını girin.
+```
 
 ## Lisans
 libre-akademi **GNU Affero General Public License | AGPL-3.0-or-later** ile lisanslanmıştır bir özgür yazılımdır. Lisans anlaşmasını okumak için **LICENSE.md**'yi inceleyin.
