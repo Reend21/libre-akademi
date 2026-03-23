@@ -2,14 +2,14 @@
 # libre akademi
 Topluluk tarafından oluşturulmuş teknoloji kursları için aracı olan açık kaynak bir çevrimiçi öğrenme platformu.
 
-libre-akademi topluluk tarafından oluşturulmuş, programlama, işletim sistemleri, arduino, yapay zeka, yazılım ve daha bir çok kategoride oluşturulan kurslar barındıran bir çevrimiçi öğrenme platformudur.  
-Kullanıcılar libre-akademi'de kursları tamamlayabilir, profillerini özelleştirebilir, kurslara puan verebilir veya dilerlerse kendileri bir kurs yayınlayabilir. **libre akademi** olarak önceliklerimiz şunlardır: 
+**libre-akademi** topluluk tarafından oluşturulmuş, **programlama, işletim sistemleri, arduino, yapay zeka, yazılım** ve daha bir çok kategoride oluşturulan kurslar barındıran bir çevrimiçi öğrenme platformudur.  
+Kullanıcılar **libre-akademi**'de kursları tamamlayabilir, profillerini özelleştirebilir, kurslara puan verebilir veya dilerlerse kendileri bir kurs yayınlayabilir. **libre akademi** olarak önceliklerimiz şunlardır: 
 
-- AGPL Lisansı ile tamamen özgür yazılım olup kullanıcılara şeffaf bir deneyim sunmak
-- Kullanıcılara hızlı ve pratik bir arayüz sunmak
-- Kullanıcı deneyimine önem vermek ve site üzerindeki geliştirmeleri bunları göz önünde bulunarak yapmak
-- Sitede reklam ve izleyici barındırmamak
-- Kullanıcıları öğrenmeye teşvik etmek
+- **AGPL Lisansı** ile tamamen özgür yazılım olup kullanıcılara şeffaf bir deneyim sunmak
+- Kullanıcılara **hızlı ve pratik** bir arayüz sunmak
+- **Kullanıcı deneyimine önem vermek** ve site üzerindeki geliştirmeleri bunları göz önünde bulunarak yapmak
+- Sitede **reklam ve izleyici barındırmamak**
+- Kullanıcıları **öğrenmeye teşvik** etmek
 
 ## Geliştirmeye katkı sağlamak
 libre akademi'nin gelişimine katkı sağlamak isityorsanız aşağıdaki adımları takip edebilirsiniz.
@@ -21,8 +21,8 @@ Bu rehber, projeye katkıda bulunmak ve projeyi kendi bilgisayarında çalışt�
 Projeyi kendi bilgisayarına almak için:
 
 ```bash
-git clone https://github.com/kullanici/proje-adi.git
-cd proje-adi
+git clone https://github.com/Reend21/libre-akademi.git
+cd libre-akademi
 ```
 ### 2. Bağımlılıkları Yüklemek
 ```
@@ -40,15 +40,11 @@ npm run build
 
 Projeye katkı sağlamak için önerilen yol şudur:
 ```
-Yeni branch aç:
 git checkout -b ozellik-ismi
-Değişiklikleri yap.
-Commit et:
 git add .
 git commit -m "Yeni özellik eklendi: X"
-Branch’i remote’a gönder ve pull request oluştur:
 git push origin ozellik-ismi
-```
+``` 
 
 ## Lisans
 libre-akademi **GNU Affero General Public License | AGPL-3.0-or-later** ile lisanslanmıştır bir özgür yazılımdır. Lisans anlaşmasını okumak için **LICENSE.md**'yi inceleyin.
