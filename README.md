@@ -47,4 +47,4 @@ git push origin ozellik-ismi
 ``` 
 
 ## Lisans
-libre akademi **GNU Affero General Public License | AGPL-3.0-or-later** ile lisanslanmıştır bir özgür yazılımdır. Lisans anlaşmasını okumak için **LICENSE.md**'yi inceleyin.
+libre akademi **GNU Affero General Public License v3.0** ile lisanslanmıştır ve bir özgür yazılımdır. Lisans anlaşmasını okumak için **LICENSE** dosyasını inceleyin.
