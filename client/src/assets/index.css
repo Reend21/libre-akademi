@@ -1,0 +1,108 @@
+:root {
+  /* Gruvbox Light Colors */
+  --gb-light-bg: #fbf1c7;
+  --gb-light-bg-sec: #f2e5bc;
+  --gb-light-bg-card: #ffffff;
+  --gb-light-fg: #3c3836;
+  --gb-light-fg-sec: #665c54;
+  --gb-light-yellow: #d79921;
+  --gb-light-red: #cc241d;
+  --gb-light-green: #98971a;
+  
+  /* Current Theme Mapping (Light Default) */
+  --bg-primary: var(--gb-light-bg);
+  --bg-secondary: var(--gb-light-bg-sec);
+  --bg-card: var(--gb-light-bg-card);
+  --text-primary: var(--gb-light-fg);
+  --text-secondary: var(--gb-light-fg-sec);
+  --accent: var(--gb-light-yellow);
+  --accent-hover: #b57614;
+  --error: var(--gb-light-red);
+  --success: var(--gb-light-green);
+  --border-color: #d5c4a1;
+}
+
+[data-theme="dark"] {
+  /* Gruvbox Dark Colors */
+  --gb-dark-bg: #282828;
+  --gb-dark-bg-sec: #3c3836;
+  --gb-dark-bg-card: #504945;
+  --gb-dark-fg: #ebdbb2;
+  --gb-dark-fg-sec: #a89984;
+  --gb-dark-yellow: #fabd2f;
+  --gb-dark-red: #fb4934;
+  --gb-dark-green: #b8bb26;
+  
+  /* Current Theme Mapping (Dark) */
+  --bg-primary: var(--gb-dark-bg);
+  --bg-secondary: var(--gb-dark-bg-sec);
+  --bg-card: var(--gb-dark-bg-card);
+  --text-primary: var(--gb-dark-fg);
+  --text-secondary: var(--gb-dark-fg-sec);
+  --accent: var(--gb-dark-yellow);
+  --accent-hover: #d79921;
+  --error: var(--gb-dark-red);
+  --success: var(--gb-dark-green);
+  --border-color: #665c54;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Nunito', sans-serif;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  transition: background-color 0.3s ease, color 0.3s ease;
+  line-height: 1.6;
+}
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+a:hover {
+  color: var(--accent-hover);
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  background: var(--accent);
+  color: #fff;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  transition: background-color 0.2s ease, transform 0.1s;
+}
+
+[data-theme="dark"] button {
+  color: #282828;
+}
+
+button:hover {
+  background: var(--accent-hover);
+}
+
+button:active {
+  transform: scale(0.98);
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+/* Utils */
+.flex { display: flex; }
+.flex-col { flex-direction: column; }
+.items-center { align-items: center; }
+.justify-between { justify-content: space-between; }
+.gap-4 { gap: 1rem; }
+.mt-8 { margin-top: 2rem; }
