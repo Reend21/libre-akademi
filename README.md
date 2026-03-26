@@ -26,10 +26,13 @@ cd libre-akademi
 ```
 ### 2. Bağımlılıkları Yüklemek
 ```
+cd client
 npm install
 ```
 3. Geliştirme Ortamını Çalıştırmak
 ```
+cd ..
+cd server
 npm run serve
 ```
 4. Build Almak
