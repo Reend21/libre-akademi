@@ -1,4 +1,4 @@
-![libre-akademi](https://github.com/Reend21/libre-akademi/blob/saglam/libre-akademi-minimal.png)
+![libre-akademi](https://github.com/Reend21/libre-akademi/blob/saglam/client/src/assets/logos/libre-akademi.png)
 # libre akademi
 Topluluk tarafından oluşturulmuş teknoloji kursları için aracı olan açık kaynak bir çevrimiçi öğrenme platformu.
 
