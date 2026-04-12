@@ -1,14 +1,29 @@
+@font-face {
+  font-family: 'Hermit';
+  src: url('./fonts/Hermit-Bold.otf') format('opentype');
+  font-weight: bold;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Hermit';
+  src: url('./fonts/Hermit-Bold.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+}
+
 :root {
   /* Gruvbox Light Colors */
   --gb-light-bg: #fbf1c7;
   --gb-light-bg-sec: #f2e5bc;
-  --gb-light-bg-card: #ffffff;
-  --gb-light-fg: #3c3836;
-  --gb-light-fg-sec: #665c54;
+  --gb-light-bg-card: #fdf5d3;
+  /* Yellowish card */
+  --gb-light-fg: #393935;
+  --gb-light-fg-sec: rgb(107, 100, 93);
   --gb-light-yellow: #d79921;
   --gb-light-red: #cc241d;
   --gb-light-green: #98971a;
-  
+
   /* Current Theme Mapping (Light Default) */
   --bg-primary: var(--gb-light-bg);
   --bg-secondary: var(--gb-light-bg-sec);
@@ -24,15 +39,15 @@
 
 [data-theme="dark"] {
   /* Gruvbox Dark Colors */
-  --gb-dark-bg: #282828;
-  --gb-dark-bg-sec: #3c3836;
-  --gb-dark-bg-card: #504945;
+  --gb-dark-bg: #393935;
+  --gb-dark-bg-sec: #3d3d39;
+  --gb-dark-bg-card: #43403a;
   --gb-dark-fg: #ebdbb2;
   --gb-dark-fg-sec: #a89984;
   --gb-dark-yellow: #fabd2f;
   --gb-dark-red: #fb4934;
   --gb-dark-green: #b8bb26;
-  
+
   /* Current Theme Mapping (Dark) */
   --bg-primary: var(--gb-dark-bg);
   --bg-secondary: var(--gb-dark-bg-sec);
@@ -94,15 +109,31 @@ button:active {
 }
 
 .container {
-  max-width: 1200px;
+  max-width: 96%;
   margin: 0 auto;
   padding: 0 1rem;
 }
 
-/* Utils */
-.flex { display: flex; }
-.flex-col { flex-direction: column; }
-.items-center { align-items: center; }
-.justify-between { justify-content: space-between; }
-.gap-4 { gap: 1rem; }
-.mt-8 { margin-top: 2rem; }
+.flex {
+  display: flex;
+}
+
+.flex-col {
+  flex-direction: column;
+}
+
+.items-center {
+  align-items: center;
+}
+
+.justify-between {
+  justify-content: space-between;
+}
+
+.gap-4 {
+  gap: 1rem;
+}
+
+.mt-8 {
+  margin-top: 2rem;
+}
