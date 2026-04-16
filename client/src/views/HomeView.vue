@@ -123,6 +123,7 @@ const infoCards = [
   gap: 2rem;
   position: relative;
   margin-bottom: 1.5rem;
+  margin-top: 1rem;
 }
 .hero::before {
   content: '';

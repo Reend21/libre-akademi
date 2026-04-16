@@ -114,6 +114,11 @@ button:active {
   padding: 0 1rem;
 }
 
+.page-transition-wrapper {
+  overflow: hidden;
+  position: relative;
+}
+
 .flex {
   display: flex;
 }

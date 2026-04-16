@@ -2,11 +2,13 @@
 import { ref, computed } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import { useThemeStore } from '../stores/theme'
+import { useAuthStore } from '../stores/auth'
 
 import logoDark from '../assets/logos/libre-akademi.png'
 import logoLight from '../assets/logos/libre-akademi-light.png'
 
 const themeStore = useThemeStore()
+const authStore = useAuthStore()
 const router = useRouter()
 
 const currentLogo = computed(() => {
@@ -27,6 +29,11 @@ const switchLang = () => {
   const idx = langs.indexOf(currentLang.value)
   currentLang.value = langs[(idx + 1) % langs.length]
 }
+
+const handleLogout = () => {
+  authStore.logout()
+  router.push('/login')
+}
 </script>
 
 <template>
@@ -35,7 +42,7 @@ const switchLang = () => {
       <!-- Left: Logo + Kurslar -->
       <div class="flex items-center gap-4 navbar-left">
         <RouterLink to="/" class="logo">
-          <img :src="currentLogo" alt="libre akademi" width="128" height="128">
+          <img :src="currentLogo" alt="libre akademi" width="80" height="80">
         </RouterLink>
         <div class="nav-links">
           <RouterLink to="/courses" class="nav-link"><i class="bi bi-search"></i> Kurslar</RouterLink>
@@ -57,8 +64,15 @@ const switchLang = () => {
 
       <!-- Right: Buttons -->
       <div class="flex items-center gap-4 navbar-right">
-        <RouterLink to="/login" class="nav-link" title="Giriş Yap"><i class="bi bi-box-arrow-in-right"></i> Giriş Yap</RouterLink>
-        <RouterLink to="/upload" class="btn-primary" title="Kurs Yükle"><i class="bi bi-cloud-arrow-up-fill"></i> Kurs Yükle</RouterLink>
+        <template v-if="!authStore.isLoggedIn">
+          <RouterLink to="/login" class="nav-link" title="Giriş Yap"><i class="bi bi-box-arrow-in-right"></i> Giriş Yap</RouterLink>
+          <RouterLink to="/login" class="btn-primary" title="Kurs Yükle"><i class="bi bi-cloud-arrow-up-fill"></i> Kurs Yükle</RouterLink>
+        </template>
+        <template v-else>
+          <RouterLink to="/profile" class="nav-link" title="Profil"><i class="bi bi-person-circle"></i> {{ authStore.user?.name || 'Profil' }}</RouterLink>
+          <RouterLink to="/upload" class="btn-primary" title="Kurs Yükle"><i class="bi bi-cloud-arrow-up-fill"></i> Kurs Yükle</RouterLink>
+          <button @click="handleLogout" class="nav-link logout-btn" title="Çıkış Yap"><i class="bi bi-box-arrow-right"></i></button>
+        </template>
 
         <button class="lang-toggle" @click="switchLang" :title="`Dil: ${currentLang}`">
           <i class="bi bi-globe"></i>
@@ -80,8 +94,7 @@ const switchLang = () => {
 .navbar {
   background-color: var(--bg-card);
   border-bottom: 2px solid var(--border-color);
-  padding: 1rem 0;
-  margin-bottom: 2rem;
+  padding: 0.5rem 0;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
 .navbar-content {
@@ -116,7 +129,7 @@ const switchLang = () => {
   background: var(--bg-primary);
   border: 2px solid var(--border-color);
   border-radius: 999px;
-  padding: 0.5rem 1.2rem;
+  padding: 0.35rem 1rem;
   gap: 0.5rem;
   width: 100%;
   transition: border-color 0.2s;
@@ -189,6 +202,18 @@ const switchLang = () => {
 .nav-link:hover {
   background-color: var(--accent);
   color: var(--bg-primary);
+}
+.logout-btn {
+  border: 2px solid var(--error);
+  color: var(--error);
+  padding: 0.5rem;
+  width: 40px;
+  height: 40px;
+  justify-content: center;
+}
+.logout-btn:hover {
+  background-color: var(--error);
+  color: #fff;
 }
 .btn-primary {
   background-color: var(--accent);
