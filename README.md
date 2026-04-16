@@ -26,8 +26,7 @@ cd libre-akademi
 ```
 ### 2. Bağımlılıkları Yüklemek
 ```
-cd client
-npm install
+cd client npm install && cd .. && cd server npm install
 ```
 3. Geliştirme Ortamını Çalıştırmak
 ```
