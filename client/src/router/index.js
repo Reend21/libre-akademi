@@ -1,23 +1,21 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import HomeView from '../views/HomeView.vue'
-import CoursesView from '../views/CoursesView.vue'
-import LoginView from '../views/LoginView.vue'
-import RegisterView from '../views/RegisterView.vue'
-import CourseUploadView from '../views/CourseUploadView.vue'
-import CourseDetailView from '../views/CourseDetailView.vue'
-import ProfileView from '../views/ProfileView.vue'
 import { useAuthStore } from '../stores/auth'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
-    { path: '/', name: 'home', component: HomeView },
-    { path: '/courses', name: 'courses', component: CoursesView },
-    { path: '/courses/:id', name: 'course-detail', component: CourseDetailView },
-    { path: '/login', name: 'login', component: LoginView },
-    { path: '/register', name: 'register', component: RegisterView },
-    { path: '/upload', name: 'upload', component: CourseUploadView, meta: { requiresAuth: true } },
-    { path: '/profile', name: 'profile', component: ProfileView, meta: { requiresAuth: true } },
+    { path: '/', name: 'home', component: () => import('../views/HomeView.vue') },
+    { path: '/courses', name: 'courses', component: () => import('../views/CoursesView.vue') },
+    { path: '/courses/:id', name: 'course-detail', component: () => import('../views/CourseDetailView.vue') },
+    { path: '/login', name: 'login', component: () => import('../views/LoginView.vue') },
+    { path: '/register', name: 'register', component: () => import('../views/RegisterView.vue') },
+    { path: '/upload', name: 'upload', component: () => import('../views/CourseUploadView.vue'), meta: { requiresAuth: true } },
+    { path: '/profile', redirect: () => {
+        const authStore = useAuthStore()
+        return authStore.user ? `/profile/${authStore.user.username}` : '/login'
+    }},
+    { path: '/profile/edit', name: 'profile-edit', component: () => import('../views/ProfileEditView.vue'), meta: { requiresAuth: true } },
+    { path: '/profile/:username', name: 'profile', component: () => import('../views/ProfileView.vue') },
   ]
 })
 
@@ -31,4 +29,3 @@ router.beforeEach((to, from, next) => {
 })
 
 export default router
-

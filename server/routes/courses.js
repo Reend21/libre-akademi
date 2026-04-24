@@ -1,8 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const Course = require('../models/Course');
-const Review = require('../models/Review');
-const Progress = require('../models/Progress');
+const { Course, User, Review, Progress, Lesson, CompletedLesson, Activity } = require('../models');
+const { Op, fn, col } = require('sequelize');
 const { protect } = require('../middleware/auth');
 const upload = require('../middleware/upload');
 
@@ -10,14 +9,44 @@ const upload = require('../middleware/upload');
 // @desc    Get all courses (with optional search/filter)
 router.get('/', async (req, res) => {
   try {
-    const query = {};
-    if (req.query.search) query.title = { $regex: req.query.search, $options: 'i' };
-    if (req.query.category) query.category = req.query.category;
+    const whereClause = {};
+    if (req.query.search) {
+      whereClause.title = { [Op.like]: `%${req.query.search}%` };
+    }
+    if (req.query.category) {
+      whereClause.category = req.query.category;
+    }
 
-    const courses = await Course.find(query).populate('instructor', 'username avatar');
-    res.json(courses);
+    // F08: Pagination
+    const page = parseInt(req.query.page) || 1;
+    const limit = Math.min(parseInt(req.query.limit) || 20, 100);
+    const offset = (page - 1) * limit;
+
+    const { count, rows: courses } = await Course.findAndCountAll({
+      where: whereClause,
+      include: [
+        { model: User, as: 'instructor', attributes: ['id', 'username', 'avatar'] }
+      ],
+      limit,
+      offset,
+      order: [['createdAt', 'DESC']]
+    });
+    
+    const mappedCourses = courses.map(c => {
+      const json = c.toJSON();
+      json._id = json.id;
+      if (json.instructor) json.instructor._id = json.instructor.id;
+      return json;
+    });
+
+    res.json({
+      courses: mappedCourses,
+      total: count,
+      page,
+      pages: Math.ceil(count / limit)
+    });
   } catch (error) {
-    res.status(500).json({ message: 'Sunucu hatası', error: error.message });
+    res.status(500).json({ message: 'Sunucu hatası' });
   }
 });
 
@@ -25,9 +54,21 @@ router.get('/', async (req, res) => {
 // @desc    Get single course by ID
 router.get('/:id', async (req, res) => {
   try {
-    const course = await Course.findById(req.params.id).populate('instructor', 'username bio avatar');
+    const course = await Course.findByPk(req.params.id, {
+      include: [
+        { model: User, as: 'instructor', attributes: ['id', 'username', 'bio', 'avatar'] },
+        { model: Lesson, as: 'lessons' }
+      ]
+    });
+
     if (!course) return res.status(404).json({ message: 'Kurs bulunamadı' });
-    res.json(course);
+
+    const mappedCourse = course.toJSON();
+    mappedCourse._id = mappedCourse.id;
+    if (mappedCourse.instructor) mappedCourse.instructor._id = mappedCourse.instructor.id;
+    mappedCourse.lessons = mappedCourse.lessons.map(l => ({ ...l, _id: l.id }));
+
+    res.json(mappedCourse);
   } catch (error) {
     res.status(500).json({ message: 'Sunucu hatası', error: error.message });
   }
@@ -43,35 +84,65 @@ router.post('/', protect, upload.single('coverImage'), async (req, res) => {
       title,
       description,
       category,
-      instructor: req.user.id,
+      instructorId: req.user.id,
       coverImage: req.file ? `/uploads/${req.file.filename}` : ''
     });
-    res.status(201).json(course);
+    
+    // Log activity
+    await Activity.create({ userId: req.user.id, action: 'course_created' });
+    
+    const mappedCourse = course.toJSON();
+    mappedCourse._id = mappedCourse.id;
+    
+    res.status(201).json(mappedCourse);
   } catch (error) {
-    res.status(500).json({ message: 'Katman Hatası', error: error.message });
+    res.status(500).json({ message: 'Kurs oluşturulurken bir hata oluştu.' });
   }
 });
 
 // @route   PUT /api/courses/:id/lessons
 // @desc    Add lesson video to course
-router.put('/:id/lessons', protect, upload.single('video'), async (req, res) => {
+router.put('/:id/lessons', protect, upload.fields([{ name: 'video', maxCount: 1 }, { name: 'thumbnail', maxCount: 1 }]), async (req, res) => {
   try {
-    const course = await Course.findById(req.params.id);
+    const course = await Course.findByPk(req.params.id);
     if (!course) return res.status(404).json({ message: 'Kurs bulunamadı' });
 
-    if (course.instructor.toString() !== req.user.id) {
+    if (course.instructorId !== req.user.id) {
        return res.status(401).json({ message: 'Yetkisiz erişim' });
     }
 
-    const { title, duration } = req.body;
-    course.lessons.push({
+    const { title, duration, description, order } = req.body;
+    
+    let videoUrl = '';
+    let thumbnailUrl = '';
+
+    if (req.files && req.files['video']) {
+      videoUrl = `/uploads/${req.files['video'][0].filename}`;
+    }
+    if (req.files && req.files['thumbnail']) {
+      thumbnailUrl = `/uploads/${req.files['thumbnail'][0].filename}`;
+    }
+    
+    await Lesson.create({
       title,
       duration,
-      videoUrl: req.file ? `/uploads/${req.file.filename}` : ''
+      description,
+      thumbnail: thumbnailUrl,
+      videoUrl,
+      order: order || 0,
+      courseId: course.id
     });
 
-    await course.save();
-    res.json(course);
+    // Fetch updated course
+    const updatedCourse = await Course.findByPk(req.params.id, {
+      include: [{ model: Lesson, as: 'lessons' }]
+    });
+
+    const mappedCourse = updatedCourse.toJSON();
+    mappedCourse._id = mappedCourse.id;
+    mappedCourse.lessons = mappedCourse.lessons.map(l => ({ ...l, _id: l.id }));
+
+    res.json(mappedCourse);
   } catch (error) {
     res.status(500).json({ message: 'Sunucu hatası', error: error.message });
   }
@@ -82,22 +153,29 @@ router.put('/:id/lessons', protect, upload.single('video'), async (req, res) => 
 router.post('/:id/reviews', protect, async (req, res) => {
   const { rating, comment } = req.body;
   try {
-    const course = await Course.findById(req.params.id);
+    const course = await Course.findByPk(req.params.id);
     if (!course) return res.status(404).json({ message: 'Kurs bulunamadı' });
 
-    const alreadyReviewed = await Review.findOne({ course: req.params.id, user: req.user.id });
+    const alreadyReviewed = await Review.findOne({ where: { courseId: req.params.id, userId: req.user.id } });
     if (alreadyReviewed) return res.status(400).json({ message: 'Kursu zaten incelediniz' });
 
-    await Review.create({ course: req.params.id, user: req.user.id, rating, comment });
+    await Review.create({ courseId: req.params.id, userId: req.user.id, rating, comment });
     
-    // Update course average
-    const reviews = await Review.find({ course: req.params.id });
-    course.averageRating = reviews.reduce((acc, item) => item.rating + acc, 0) / reviews.length;
+    // F09: Use SQL AVG instead of loading all reviews into memory
+    const result = await Review.findOne({
+      where: { courseId: req.params.id },
+      attributes: [
+        [fn('AVG', col('rating')), 'avg']
+      ],
+      raw: true
+    });
+    
+    course.averageRating = parseFloat(result.avg) || 0;
     await course.save();
 
     res.status(201).json({ message: 'İnceleme eklendi' });
   } catch (error) {
-    res.status(500).json({ message: 'Sunucu hatası', error: error.message });
+    res.status(500).json({ message: 'Sunucu hatası' });
   }
 });
 
@@ -106,22 +184,44 @@ router.post('/:id/reviews', protect, async (req, res) => {
 router.post('/:id/progress', protect, async (req, res) => {
   const { lessonId } = req.body;
   try {
-    let progress = await Progress.findOne({ course: req.params.id, user: req.user.id });
+    const course = await Course.findByPk(req.params.id, {
+      include: [{ model: Lesson, as: 'lessons' }]
+    });
+    if (!course) return res.status(404).json({ message: 'Kurs bulunamadı' });
+
+    let progress = await Progress.findOne({ 
+      where: { courseId: req.params.id, userId: req.user.id },
+      include: [{ model: CompletedLesson, as: 'completedLessons' }]
+    });
     
     if (!progress) {
-      progress = await Progress.create({ course: req.params.id, user: req.user.id, completedLessons: [lessonId] });
-    } else {
-      if (!progress.completedLessons.includes(lessonId)) {
-        progress.completedLessons.push(lessonId);
-      }
+      progress = await Progress.create({ courseId: req.params.id, userId: req.user.id });
+      // Reload to get the empty completions array
+      progress = await Progress.findByPk(progress.id, {
+        include: [{ model: CompletedLesson, as: 'completedLessons' }]
+      });
     }
 
-    const course = await Course.findById(req.params.id);
-    if (progress.completedLessons.length >= course.lessons.length) {
-      progress.isCompleted = true;
+    const alreadyCompleted = progress.completedLessons.find(c => c.lessonId === parseInt(lessonId));
+    
+    if (!alreadyCompleted) {
+      await CompletedLesson.create({ progressId: progress.id, lessonId: parseInt(lessonId) });
+      progress.completedLessons.push({ lessonId: parseInt(lessonId) }); // push for memory check below
+      
+      // Log activity
+      await Activity.create({ userId: req.user.id, action: 'lesson_completed' });
     }
-    await progress.save();
-    res.json(progress);
+
+    if (progress.completedLessons.length >= course.lessons.length && course.lessons.length > 0) {
+      progress.isCompleted = true;
+      await progress.save();
+    }
+    
+    const mappedProgress = progress.toJSON();
+    mappedProgress._id = mappedProgress.id;
+    mappedProgress.completedLessons = mappedProgress.completedLessons.map(cl => cl.lessonId);
+
+    res.json(mappedProgress);
   } catch (error) {
     res.status(500).json({ message: 'Sunucu hatası', error: error.message });
   }

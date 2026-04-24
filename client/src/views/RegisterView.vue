@@ -2,6 +2,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
+import { authApi } from '../api/auth'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -11,9 +12,13 @@ const username = ref('')
 const email = ref('')
 const password = ref('')
 const passwordConfirm = ref('')
+const age = ref('')
+const gender = ref('Belirtmek İstemiyorum')
 const captchaInput = ref('')
 const num1 = ref(0)
 const num2 = ref(0)
+const error = ref('')
+const loading = ref(false)
 
 const generateCaptcha = () => {
   num1.value = Math.floor(Math.random() * 10) + 1
@@ -24,22 +29,36 @@ onMounted(() => {
   generateCaptcha()
 })
 
-const handleRegister = () => {
+const handleRegister = async () => {
+  error.value = ''
   if (parseInt(captchaInput.value) !== num1.value + num2.value) {
-    alert('Captcha hatalı, lütfen tekrar deneyin.')
+    error.value = 'Captcha hatalı, lütfen tekrar deneyin.'
     generateCaptcha()
     captchaInput.value = ''
     return
   }
   if (password.value !== passwordConfirm.value) {
-    alert('Şifreler eşleşmiyor.')
+    error.value = 'Şifreler eşleşmiyor.'
     return
   }
   
-  // Simulate registration/login
-  authStore.login({ name: fullName.value, username: username.value, email: email.value })
-  alert('Kayıt başarılı!')
-  router.push('/')
+  loading.value = true
+  try {
+    const userData = await authApi.register({
+      name: fullName.value,
+      username: username.value,
+      email: email.value,
+      password: password.value,
+      age: age.value ? parseInt(age.value) : null,
+      gender: gender.value
+    })
+    authStore.login(userData)
+    router.push('/')
+  } catch (err) {
+    error.value = err.message || 'Kayıt yapılamadı.'
+  } finally {
+    loading.value = false
+  }
 }
 </script>
 
@@ -79,6 +98,11 @@ const handleRegister = () => {
         </div>
         
         <form @submit.prevent="handleRegister" class="auth-form">
+          <div v-if="error" class="error-message">
+            <i class="bi bi-exclamation-triangle-fill"></i>
+            {{ error }}
+          </div>
+
           <div class="input-row">
             <div class="input-group">
               <label><i class="bi bi-person-fill"></i> Ad Soyad</label>
@@ -97,6 +121,21 @@ const handleRegister = () => {
 
           <div class="input-row">
             <div class="input-group">
+              <label><i class="bi bi-calendar3"></i> Yaş</label>
+              <input type="number" v-model="age" placeholder="25" min="1" max="120" />
+            </div>
+            <div class="input-group">
+              <label><i class="bi bi-gender-ambiguous"></i> Cinsiyet</label>
+              <select v-model="gender" class="form-select">
+                <option value="Belirtmek İstemiyorum">Belirtmek İstemiyorum</option>
+                <option value="Erkek">Erkek</option>
+                <option value="Kadın">Kadın</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="input-row">
+            <div class="input-group">
               <label><i class="bi bi-lock-fill"></i> Şifre</label>
               <input type="password" v-model="password" required placeholder="••••••••" />
             </div>
@@ -111,8 +150,10 @@ const handleRegister = () => {
             <input type="number" v-model="captchaInput" required placeholder="İşlem sonucunu yazınız" />
           </div>
 
-          <button type="submit" class="submit-btn">
-            <i class="bi bi-person-plus-fill"></i> Kayıt Ol
+          <button type="submit" class="submit-btn" :disabled="loading">
+            <i v-if="!loading" class="bi bi-person-plus-fill"></i>
+            <span v-else class="spinner"></span>
+            {{ loading ? 'Hesap Oluşturuluyor...' : 'Kayıt Ol' }}
           </button>
         </form>
 
@@ -130,15 +171,15 @@ const handleRegister = () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 2rem;
+  padding: 2rem 1rem; /* Reduced horizontal padding (margin equivalent) */
 }
 
 .auth-wrapper {
   display: grid;
-  grid-template-columns: 1fr 1.2fr;
+  grid-template-columns: 1fr 1.3fr; /* Slightly wider right side */
   width: 100%;
-  max-width: 1100px;
-  min-height: 700px;
+  max-width: 1350px; /* Made it significantly wider */
+  min-height: 750px; /* Made it slightly taller */
   border-radius: 24px;
   overflow: hidden;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
@@ -153,7 +194,7 @@ const handleRegister = () => {
 .auth-side-info {
   background: linear-gradient(135deg, var(--accent) 0%, #b57614 100%);
   color: #fff;
-  padding: 3rem;
+  padding: 4rem;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -172,37 +213,37 @@ const handleRegister = () => {
 }
 
 .brand-icon {
-  font-size: 5rem;
+  font-size: 5.5rem;
   margin-bottom: 1.5rem;
   display: block;
 }
 
 .branding-group h1 {
-  font-size: 3rem;
+  font-size: 3.5rem;
   margin-bottom: 0.5rem;
   font-family: 'Hermit', monospace;
 }
 
 .branding-group p {
-  font-size: 1.2rem;
+  font-size: 1.3rem;
   opacity: 0.9;
-  margin-bottom: 3rem;
+  margin-bottom: 3.5rem;
 }
 
 .icon-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 2rem;
 }
 
 .icon-item {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.5rem;
-  padding: 1rem;
+  gap: 0.75rem;
+  padding: 1.5rem;
   background: rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
+  border-radius: 14px;
   backdrop-filter: blur(5px);
   transition: transform 0.3s ease;
 }
@@ -213,17 +254,17 @@ const handleRegister = () => {
 }
 
 .icon-item i {
-  font-size: 2rem;
+  font-size: 2.5rem;
 }
 
 .icon-item span {
-  font-size: 0.9rem;
+  font-size: 1rem;
   font-weight: 600;
   text-align: center;
 }
 
 .auth-form-area {
-  padding: 4rem;
+  padding: 5rem 6rem;
   background: var(--bg-primary);
   display: flex;
   flex-direction: column;
@@ -271,7 +312,7 @@ const handleRegister = () => {
   gap: 0.5rem;
 }
 
-.input-group input {
+.input-group input, .input-group select {
   padding: 0.8rem 1.2rem;
   border-radius: 12px;
   border: 2px solid var(--border-color);
@@ -281,7 +322,7 @@ const handleRegister = () => {
   transition: all 0.2s;
 }
 
-.input-group input:focus {
+.input-group input:focus, .input-group select:focus {
   outline: none;
   border-color: var(--accent);
   box-shadow: 0 0 0 4px rgba(215, 153, 33, 0.1);
@@ -310,6 +351,39 @@ const handleRegister = () => {
   background: var(--accent-hover);
   transform: translateY(-2px);
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+.submit-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.error-message {
+  background: rgba(251, 73, 52, 0.1);
+  color: #fb4934;
+  padding: 1rem;
+  border-radius: 12px;
+  border: 1px solid rgba(251, 73, 52, 0.2);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.spinner {
+  width: 20px;
+  height: 20px;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: #fff;
+  animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 .form-footer {

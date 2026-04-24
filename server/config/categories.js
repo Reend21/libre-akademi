@@ -36,7 +36,15 @@ const CATEGORIES = [
   'C++',
   'C#',
   'Java',
-  'Ruby'
+  'Ruby',
+
+  // Yapay Zeka
+  'Yapay Zeka Temelleri',
+  'Makine Öğrenmesi',
+  'Derin Öğrenme',
+  'Doğal Dil İşleme',
+  'Görüntü İşleme',
+  'Generative AI'
 ];
 
 module.exports = CATEGORIES;

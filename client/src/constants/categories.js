@@ -53,6 +53,18 @@ export const CATEGORY_STRUCTURE = [
       { name: 'Java', icon: 'bi bi-cup-hot' },
       { name: 'Ruby', icon: 'bi bi-gem' }
     ]
+  },
+  {
+    name: 'Yapay Zeka',
+    icon: 'bi bi-robot',
+    subcategories: [
+      { name: 'Yapay Zeka Temelleri', icon: 'bi bi-cpu' },
+      { name: 'Makine Öğrenmesi', icon: 'bi bi-diagram-3' },
+      { name: 'Derin Öğrenme', icon: 'bi bi-layers' },
+      { name: 'Doğal Dil İşleme', icon: 'bi bi-chat-text' },
+      { name: 'Görüntü İşleme', icon: 'bi bi-image' },
+      { name: 'Generative AI', icon: 'bi bi-stars' }
+    ]
   }
 ];
 

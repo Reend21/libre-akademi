@@ -2,6 +2,7 @@
 import { ref, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { CATEGORY_STRUCTURE, POPULAR_CATEGORIES } from '../constants/categories'
+import { coursesApi } from '../api/courses'
 
 const route = useRoute()
 const router = useRouter()
@@ -23,15 +24,8 @@ const toggleAccordion = (name) => {
 const fetchCourses = async () => {
   loading.value = true
   try {
-    let url = 'http://localhost:5000/api/courses'
-    const params = new URLSearchParams()
-    if (searchQuery.value) params.append('search', searchQuery.value)
-    if (selectedCategory.value) params.append('category', selectedCategory.value)
-    
-    if (params.toString()) url += `?${params.toString()}`
-    
-    const res = await fetch(url)
-    courses.value = await res.json()
+    const data = await coursesApi.getAllCourses(searchQuery.value, selectedCategory.value)
+    courses.value = data.courses || data // Support both paginated and legacy response
   } catch (error) {
     console.error('Kurslar yüklenirken hata:', error)
   } finally {
@@ -203,12 +197,10 @@ onMounted(() => {
 /* Full screen layout */
 .explore-page-wrapper {
   background: var(--bg-primary);
-  padding: 0 3rem;
 }
 
 .explore-container {
   max-width: 1600px;
-  margin: 0 auto;
 }
 
 .explore-container {

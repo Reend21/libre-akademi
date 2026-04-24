@@ -1,8 +1,7 @@
 const { DataTypes } = require('sequelize');
 const { sequelize } = require('../config/db');
-const CATEGORIES = require('../config/categories');
 
-const Course = sequelize.define('Course', {
+const Lesson = sequelize.define('Lesson', {
   id: {
     type: DataTypes.INTEGER,
     autoIncrement: true,
@@ -12,20 +11,22 @@ const Course = sequelize.define('Course', {
     type: DataTypes.STRING,
     allowNull: false,
   },
-  description: {
-    type: DataTypes.TEXT,
+  videoUrl: {
+    type: DataTypes.STRING,
     allowNull: false,
   },
-  category: {
-    type: DataTypes.ENUM(...CATEGORIES),
-    allowNull: false,
-  },
-  coverImage: {
+  duration: {
     type: DataTypes.STRING,
   },
-  averageRating: {
-    type: DataTypes.FLOAT,
-    defaultValue: 0,
+  description: {
+    type: DataTypes.TEXT,
+  },
+  thumbnail: {
+    type: DataTypes.STRING,
+  },
+  order: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0
   }
 }, {
   timestamps: true,
@@ -34,4 +35,4 @@ const Course = sequelize.define('Course', {
   }
 });
 
-module.exports = Course;
+module.exports = Lesson;

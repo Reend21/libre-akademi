@@ -1,21 +1,14 @@
 const { DataTypes } = require('sequelize');
 const { sequelize } = require('../config/db');
 
-const Progress = sequelize.define('Progress', {
+const CompletedLesson = sequelize.define('CompletedLesson', {
   id: {
     type: DataTypes.INTEGER,
     autoIncrement: true,
     primaryKey: true,
-  },
-  isCompleted: {
-    type: DataTypes.BOOLEAN,
-    defaultValue: false,
   }
 }, {
   timestamps: true,
-  getterMethods: {
-    _id() { return this.id; }
-  }
 });
 
-module.exports = Progress;
+module.exports = CompletedLesson;

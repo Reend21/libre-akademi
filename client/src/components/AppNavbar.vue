@@ -1,8 +1,9 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import { useThemeStore } from '../stores/theme'
 import { useAuthStore } from '../stores/auth'
+import { authApi } from '../api/auth'
 
 import logoDark from '../assets/logos/libre-akademi.png'
 import logoLight from '../assets/logos/libre-akademi-light.png'
@@ -16,8 +17,16 @@ const currentLogo = computed(() => {
 })
 
 const searchQuery = ref('')
-const currentLang = ref('TR')
-const langs = ['TR', 'EN', 'DE']
+const currentLang = ref(authStore.user?.preferredLanguage?.toUpperCase() || 'TR')
+const isLangDropdownOpen = ref(false)
+
+const langs = [
+  { code: 'AR', name: 'Arapça' },
+  { code: 'TR', name: 'Türkçe' },
+  { code: 'EN', name: 'İngilizce' },
+  { code: 'ES', name: 'İspanyolca' },
+  { code: 'AZ', name: 'Azerbeycanca' }
+]
 
 const handleSearch = () => {
   if (searchQuery.value.trim()) {
@@ -25,10 +34,43 @@ const handleSearch = () => {
   }
 }
 
-const switchLang = () => {
-  const idx = langs.indexOf(currentLang.value)
-  currentLang.value = langs[(idx + 1) % langs.length]
+const toggleLangDropdown = () => {
+  isLangDropdownOpen.value = !isLangDropdownOpen.value
 }
+
+const selectLang = async (lang) => {
+  currentLang.value = lang.code
+  isLangDropdownOpen.value = false
+  
+  if (authStore.isLoggedIn) {
+    try {
+      await authApi.updateLanguage(authStore.token, lang.code.toLowerCase())
+      authStore.setLanguage(lang.code.toLowerCase())
+    } catch (error) {
+      console.error('Dil güncellenemedi:', error)
+    }
+  }
+}
+
+const closeDropdown = (e) => {
+  if (!e.target.closest('.lang-selector')) {
+    isLangDropdownOpen.value = false
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('click', closeDropdown)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('click', closeDropdown)
+})
+
+watch(() => authStore.user?.preferredLanguage, (newLang) => {
+  if (newLang) {
+    currentLang.value = newLang.toUpperCase()
+  }
+})
 
 const handleLogout = () => {
   authStore.logout()
@@ -74,9 +116,24 @@ const handleLogout = () => {
           <button @click="handleLogout" class="nav-link logout-btn" title="Çıkış Yap"><i class="bi bi-box-arrow-right"></i></button>
         </template>
 
-        <button class="lang-toggle" @click="switchLang" :title="`Dil: ${currentLang}`">
-          <i class="bi bi-globe"></i>
-        </button>
+        <div class="lang-selector">
+          <button class="lang-toggle" @click.stop="toggleLangDropdown" :title="`Dil: ${currentLang}`">
+            <i class="bi bi-globe"></i>
+            <span class="lang-code">{{ currentLang }}</span>
+          </button>
+          
+          <div v-if="isLangDropdownOpen" class="lang-dropdown">
+            <button 
+              v-for="lang in langs" 
+              :key="lang.code"
+              class="lang-option"
+              :class="{ active: currentLang === lang.code }"
+              @click="selectLang(lang)"
+            >
+              {{ lang.name }}
+            </button>
+          </div>
+        </div>
 
         <button
           @click="themeStore.toggleTheme"
@@ -154,25 +211,67 @@ const handleLogout = () => {
 .search-input::placeholder {
   color: var(--text-secondary);
 }
+.lang-selector {
+  position: relative;
+}
 .lang-toggle {
   background: transparent;
   color: var(--text-primary);
-  border: none;
-  font-size: 1.25rem;
-  padding: 0.25rem 0.5rem;
-  border-radius: 50%;
-  width: 40px;
-  height: 40px;
+  border: 2px solid var(--border-color);
+  font-size: 1rem;
+  padding: 0.4rem 0.8rem;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.2rem;
+  gap: 0.5rem;
   font-weight: 700;
   transition: all 0.2s ease;
+  cursor: pointer;
 }
 .lang-toggle:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.lang-code {
+  font-size: 0.85rem;
+}
+.lang-dropdown {
+  position: absolute;
+  top: 120%;
+  right: 0;
+  background: var(--bg-card);
+  border: 2px solid var(--border-color);
+  border-radius: 12px;
+  padding: 0.5rem;
+  min-width: 150px;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.lang-option {
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  padding: 0.6rem 1rem;
+  text-align: left;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+.lang-option:hover {
   background: var(--bg-secondary);
   color: var(--accent);
+}
+.lang-option.active {
+  background: var(--accent);
+  color: #fff;
+}
+[data-theme="dark"] .lang-option.active {
+  color: var(--bg-primary);
 }
 .logo {
   font-size: 1.5rem;
@@ -198,6 +297,7 @@ const handleLogout = () => {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  white-space: nowrap;
 }
 .nav-link:hover {
   background-color: var(--accent);
@@ -222,6 +322,10 @@ const handleLogout = () => {
   border-radius: 6px;
   font-weight: 600;
   transition: transform 0.1s;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  white-space: nowrap;
 }
 .btn-primary:active {
   transform: scale(0.95);

@@ -116,14 +116,14 @@ const infoCards = [
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 3rem 3rem;
+  padding: 3rem 4rem;
   background-color: var(--bg-secondary);
-  border-radius: 12px;
-  box-shadow: 0 10px 30px -5px rgba(0,0,0,0.1);
-  gap: 2rem;
+  border-radius: 20px;
+  box-shadow: 0 20px 40px -10px rgba(0,0,0,0.1);
+  gap: 3rem;
   position: relative;
-  margin-bottom: 1.5rem;
-  margin-top: 1rem;
+  max-width: 1100px;
+  margin: 1rem auto 1.5rem auto;
 }
 .hero::before {
   content: '';
@@ -235,9 +235,11 @@ const infoCards = [
   color: var(--bg-primary);
 }
 .stats {
-  padding: 0 0.5rem;
-  gap: 1.5rem;
-  margin-bottom: 4rem;
+  padding: 0 1rem;
+  gap: 2rem;
+  margin: 0 auto 5rem auto;
+  max-width: 1100px;
+  width: 100%;
 }
 .stat-card {
   flex: 1;

@@ -2,18 +2,28 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
+import { authApi } from '../api/auth'
 
 const router = useRouter()
 const authStore = useAuthStore()
 
 const identifier = ref('') // Email or Username
 const password = ref('')
+const error = ref('')
+const loading = ref(false)
 
-const handleLogin = () => {
-  // Simple simulation
-  authStore.login({ name: identifier.value, identifier: identifier.value })
-  alert('Giriş başarılı!')
-  router.push('/')
+const handleLogin = async () => {
+  error.value = ''
+  loading.value = true
+  try {
+    const userData = await authApi.login(identifier.value, password.value)
+    authStore.login(userData)
+    router.push('/')
+  } catch (err) {
+    error.value = err.message || 'Giriş yapılamadı. Lütfen bilgilerinizi kontrol edin.'
+  } finally {
+    loading.value = false
+  }
 }
 </script>
 
@@ -53,6 +63,11 @@ const handleLogin = () => {
         </div>
         
         <form @submit.prevent="handleLogin" class="auth-form">
+          <div v-if="error" class="error-message">
+            <i class="bi bi-exclamation-triangle-fill"></i>
+            {{ error }}
+          </div>
+
           <div class="input-group">
             <label><i class="bi bi-person-fill"></i> E-posta veya Kullanıcı Adı</label>
             <input type="text" v-model="identifier" required placeholder="can@akademi.org veya canyilmaz" />
@@ -63,8 +78,10 @@ const handleLogin = () => {
             <input type="password" v-model="password" required placeholder="••••••••" />
           </div>
 
-          <button type="submit" class="submit-btn">
-            <i class="bi bi-box-arrow-in-right"></i> Giriş Yap
+          <button type="submit" class="submit-btn" :disabled="loading">
+            <i v-if="!loading" class="bi bi-box-arrow-in-right"></i>
+            <span v-else class="spinner"></span>
+            {{ loading ? 'Giriş Yapılıyor...' : 'Giriş Yap' }}
           </button>
         </form>
 
@@ -256,6 +273,38 @@ const handleLogin = () => {
   background: var(--accent-hover);
   transform: translateY(-2px);
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+.submit-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.error-message {
+  background: rgba(251, 73, 52, 0.1);
+  color: #fb4934;
+  padding: 1rem;
+  border-radius: 12px;
+  border: 1px solid rgba(251, 73, 52, 0.2);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.spinner {
+  width: 20px;
+  height: 20px;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: #fff;
+  animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 .form-footer {
