@@ -16,6 +16,11 @@ libre akademi'nin gelişimine katkı sağlamak isityorsanız aşağıdaki adıml
 
 Bu rehber, projeye katkıda bulunmak ve projeyi kendi bilgisayarında çalıştırmak için adım adım yönerge sağlar.
 
+### Ön hazırlıklar
+libre-akademiyi sisteminizde docker benzeri bir araç ile çalıştırmayacaksanız şu bağımlılıklara ihtiyacınız vardır:
+  - Node.js & npm
+  - MySQL
+
 ### 1. Depoyu Klonlamak
 
 Projeyi kendi bilgisayarına almak için:
@@ -26,13 +31,15 @@ cd libre-akademi
 ```
 ### 2. Bağımlılıkları Yüklemek
 ```
-cd client npm install && cd .. && cd server npm install
+cd client
+npm install
+cd server
+npm install
 ```
 3. Geliştirme Ortamını Çalıştırmak
 ```
-cd ..
-cd server
-npm run serve
+cd client && npm run dev
+cd server && npm run dev
 ```
 4. Build Almak
 ```
