@@ -80,7 +80,8 @@ router.post('/register', authLimiter, registerValidation, async (req, res) => {
       token: generateToken(user.id)
     });
   } catch (error) {
-    res.status(500).json({ message: 'Sunucu hatası' });
+    console.error('Register error:', error);
+    res.status(500).json({ message: 'Sunucu hatası', error: error.message });
   }
 });
 
@@ -114,7 +115,8 @@ router.post('/login', authLimiter, loginValidation, async (req, res) => {
       res.status(401).json({ message: 'Geçersiz kullanıcı adı/e-posta veya şifre' });
     }
   } catch (error) {
-    res.status(500).json({ message: 'Sunucu hatası' });
+    console.error('Login error:', error);
+    res.status(500).json({ message: 'Sunucu hatası', error: error.message });
   }
 });
 

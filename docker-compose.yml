@@ -26,18 +26,23 @@ services:
       - DB_PASS=21212121
       - DB_NAME=libre_akademi
       - CLIENT_URL=http://localhost:80
+      - JWT_SECRET=supersecretjwtkey_libre_akademi
       - SYNC_DB=true
     depends_on:
       - db
 
   client:
-    build: ./client
+    build:
+      context: ./client
+      args:
+        - VITE_API_URL=http://localhost:5000
     container_name: libre-akademi-client
     restart: always
     ports:
       - "80:80"
     depends_on:
-      - server
+      server:
+        condition: service_started
 
 volumes:
   db_data:
