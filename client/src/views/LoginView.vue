@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { authApi } from '../api/auth'
@@ -12,8 +12,17 @@ const password = ref('')
 const error = ref('')
 const loading = ref(false)
 
+const validationErrors = computed(() => {
+  const errors = {}
+  if (identifier.value && identifier.value.length < 3) errors.identifier = 'En az 3 karakter olmalıdır.'
+  if (password.value && password.value.length < 6) errors.password = 'Şifre en az 6 karakter olmalıdır.'
+  return errors
+})
+
 const handleLogin = async () => {
   error.value = ''
+  if (Object.keys(validationErrors.value).length > 0) return
+
   loading.value = true
   try {
     const userData = await authApi.login(identifier.value, password.value)
@@ -70,15 +79,17 @@ const handleLogin = async () => {
 
           <div class="input-group">
             <label><i class="bi bi-person-fill"></i> E-posta veya Kullanıcı Adı</label>
-            <input type="text" v-model="identifier" required placeholder="can@akademi.org veya canyilmaz" />
+            <input type="text" v-model="identifier" :class="{ 'invalid': validationErrors.identifier }" required placeholder="can@akademi.org veya canyilmaz" />
+            <span v-if="validationErrors.identifier" class="field-error">{{ validationErrors.identifier }}</span>
           </div>
 
           <div class="input-group">
             <label><i class="bi bi-lock-fill"></i> Şifre</label>
-            <input type="password" v-model="password" required placeholder="••••••••" />
+            <input type="password" v-model="password" :class="{ 'invalid': validationErrors.password }" required placeholder="••••••••" />
+            <span v-if="validationErrors.password" class="field-error">{{ validationErrors.password }}</span>
           </div>
 
-          <button type="submit" class="submit-btn" :disabled="loading">
+          <button type="submit" class="submit-btn" :disabled="loading || Object.keys(validationErrors).length > 0">
             <i v-if="!loading" class="bi bi-box-arrow-in-right"></i>
             <span v-else class="spinner"></span>
             {{ loading ? 'Giriş Yapılıyor...' : 'Giriş Yap' }}
@@ -248,6 +259,17 @@ const handleLogin = async () => {
   outline: none;
   border-color: var(--accent);
   box-shadow: 0 0 0 4px rgba(215, 153, 33, 0.1);
+}
+
+.input-group input.invalid {
+  border-color: #fb4934;
+}
+
+.field-error {
+  color: #fb4934;
+  font-size: 0.8rem;
+  font-weight: 700;
+  margin-top: 0.25rem;
 }
 
 .submit-btn {

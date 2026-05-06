@@ -163,7 +163,6 @@ onMounted(() => {
           <div v-for="course in courses" :key="course._id" class="course-card-premium">
             <div class="card-inner">
               <div class="course-image" :style="{ backgroundImage: `url(${course.coverImage || '/placeholder-course.jpg'})` }">
-                <div class="category-tag">{{ course.category }}</div>
               </div>
               <div class="course-body">
                 <h3>{{ course.title }}</h3>
@@ -184,6 +183,7 @@ onMounted(() => {
                   </div>
                   <RouterLink :to="`/courses/${course._id}`" class="enroll-btn"> İncele </RouterLink>
                 </div>
+                <div class="category-tag-mini">{{ course.category }}</div>
               </div>
             </div>
           </div>
@@ -422,17 +422,18 @@ onMounted(() => {
   position: relative;
 }
 
-.category-tag {
-  position: absolute;
-  top: 1rem;
-  right: 1rem;
-  background: rgba(255,255,255,0.9);
-  color: #282828;
-  padding: 0.3rem 0.8rem;
-  border-radius: 8px;
-  font-size: 0.7rem;
+.category-tag-mini {
+  background: var(--bg-secondary);
+  color: var(--accent);
+  padding: 0.4rem 1rem;
+  font-size: 0.75rem;
   font-weight: 800;
   text-transform: uppercase;
+  border-top: 1px solid var(--border-color);
+  text-align: center;
+  margin: 0 -1.5rem -1.5rem -1.5rem;
+  border-bottom-left-radius: 20px;
+  border-bottom-right-radius: 20px;
 }
 
 .course-body {

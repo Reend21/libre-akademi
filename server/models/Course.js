@@ -26,6 +26,10 @@ const Course = sequelize.define('Course', {
   averageRating: {
     type: DataTypes.FLOAT,
     defaultValue: 0,
+  },
+  donationEnabled: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: true,
   }
 }, {
   timestamps: true,

@@ -57,6 +57,16 @@ const contributionDays = computed(() => {
   }
   return days;
 })
+
+const genderLabel = computed(() => {
+  const mapping = {
+    'male': 'Erkek',
+    'female': 'Kadın',
+    'other': 'Diğer',
+    'prefer_not_to_say': 'Belirtmek İstemiyorum'
+  };
+  return mapping[profileData.value?.gender] || profileData.value?.gender;
+})
 </script>
 
 <template>
@@ -76,7 +86,7 @@ const contributionDays = computed(() => {
             <p class="profile-username">@{{ profileData.username }}</p>
             <div class="profile-details">
               <span v-if="profileData.age"><i class="bi bi-calendar3"></i> Yaş: {{ profileData.age }}</span>
-              <span v-if="profileData.gender"><i class="bi bi-gender-ambiguous"></i> {{ profileData.gender }}</span>
+              <span v-if="profileData.gender"><i class="bi bi-gender-ambiguous"></i> {{ genderLabel }}</span>
               <span v-if="profileData.phoneNumber"><i class="bi bi-telephone"></i> {{ profileData.phoneNumber }}</span>
             </div>
 

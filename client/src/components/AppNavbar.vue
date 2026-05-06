@@ -81,17 +81,23 @@ const handleLogout = () => {
 <template>
   <nav class="navbar">
     <div class="container navbar-content">
-      <!-- Left: Logo + Kurslar -->
-      <div class="flex items-center gap-4 navbar-left">
+      <!-- Left: Logo + Actions -->
+      <div class="flex items-center gap-6 navbar-left">
         <RouterLink to="/" class="logo">
-          <img :src="currentLogo" alt="libre akademi" width="80" height="80">
+          <img :src="currentLogo" alt="libre akademi" width="90" height="90">
         </RouterLink>
         <div class="nav-links">
+          <RouterLink v-if="!authStore.isLoggedIn" to="/login" class="btn-primary" title="Kurs Yükle">
+            <i class="bi bi-cloud-arrow-up-fill"></i> Kurs Yükle
+          </RouterLink>
+          <RouterLink v-else to="/upload" class="btn-primary" title="Kurs Yükle">
+            <i class="bi bi-cloud-arrow-up-fill"></i> Kurs Yükle
+          </RouterLink>
           <RouterLink to="/courses" class="nav-link"><i class="bi bi-search"></i> Kurslar</RouterLink>
         </div>
       </div>
 
-      <!-- Center: Search -->
+      <!-- Center: Large Search -->
       <div class="navbar-search">
         <form @submit.prevent="handleSearch" class="search-form">
           <i class="bi bi-search search-icon"></i>
@@ -104,15 +110,13 @@ const handleLogout = () => {
         </form>
       </div>
 
-      <!-- Right: Buttons -->
+      <!-- Right: User & Utils -->
       <div class="flex items-center gap-4 navbar-right">
         <template v-if="!authStore.isLoggedIn">
           <RouterLink to="/login" class="nav-link" title="Giriş Yap"><i class="bi bi-box-arrow-in-right"></i> Giriş Yap</RouterLink>
-          <RouterLink to="/login" class="btn-primary" title="Kurs Yükle"><i class="bi bi-cloud-arrow-up-fill"></i> Kurs Yükle</RouterLink>
         </template>
         <template v-else>
           <RouterLink to="/profile" class="nav-link" title="Profil"><i class="bi bi-person-circle"></i> {{ authStore.user?.name || 'Profil' }}</RouterLink>
-          <RouterLink to="/upload" class="btn-primary" title="Kurs Yükle"><i class="bi bi-cloud-arrow-up-fill"></i> Kurs Yükle</RouterLink>
           <button @click="handleLogout" class="nav-link logout-btn" title="Çıkış Yap"><i class="bi bi-box-arrow-right"></i></button>
         </template>
 
@@ -156,47 +160,46 @@ const handleLogout = () => {
 }
 .navbar-content {
   display: grid;
-  grid-template-columns: 1fr minmax(auto, 700px) 1fr;
+  grid-template-columns: auto 1fr auto;
   align-items: center;
-  gap: 30px;
-  min-height: 40px;
+  gap: 40px;
+  min-height: 50px;
 }
 .navbar-left {
   display: flex;
-  justify-content: flex-end;
+  justify-content: flex-start;
   align-items: center;
-  gap: 2rem;
-  width: 100%;
+  gap: 2.5rem;
 }
 .navbar-right {
   display: flex;
-  justify-content: flex-start;
+  justify-content: flex-end;
   align-items: center;
-  gap: 1rem;
-  width: 100%;
+  gap: 1.5rem;
 }
 .navbar-search {
   display: flex;
   justify-content: center;
-  width: 100%;
 }
 .search-form {
   display: flex;
   align-items: center;
   background: var(--bg-primary);
   border: 2px solid var(--border-color);
-  border-radius: 999px;
-  padding: 0.35rem 1rem;
-  gap: 0.5rem;
+  border-radius: 12px;
+  padding: 0.6rem 1.2rem;
+  gap: 0.75rem;
   width: 100%;
-  transition: border-color 0.2s;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .search-form:focus-within {
   border-color: var(--accent);
+  box-shadow: 0 0 0 4px rgba(250, 189, 47, 0.1);
+  transform: scale(1.02);
 }
 .search-icon {
   color: var(--text-secondary);
-  font-size: 0.95rem;
+  font-size: 1.1rem;
   flex-shrink: 0;
 }
 .search-input {
@@ -205,7 +208,7 @@ const handleLogout = () => {
   outline: none;
   color: var(--text-primary);
   font-family: inherit;
-  font-size: 0.95rem;
+  font-size: 1.1rem;
   width: 100%;
 }
 .search-input::placeholder {

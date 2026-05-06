@@ -1,13 +1,14 @@
-version: '3.8'
-
 services:
   db:
     image: mysql:8.0
     container_name: libre-akademi-db
     restart: always
     environment:
-      MYSQL_DATABASE: libre_akademi
-      MYSQL_ROOT_PASSWORD: 21212121
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASS}
+      MYSQL_ROOT_PASSWORD: ${DB_PASS}
+      MYSQL_ROOT_HOST: "%"
     ports:
       - "3307:3306"
     volumes:
@@ -22,27 +23,32 @@ services:
     environment:
       - PORT=5000
       - DB_HOST=db
-      - DB_USER=root
-      - DB_PASS=21212121
-      - DB_NAME=libre_akademi
-      - CLIENT_URL=http://localhost:80
-      - JWT_SECRET=supersecretjwtkey_libre_akademi
+      - DB_USER=${DB_USER}
+      - DB_PASS=${DB_PASS}
+      - DB_NAME=${DB_NAME}
+      - CLIENT_URL=${CLIENT_URL}
+      - JWT_SECRET=${JWT_SECRET}
       - SYNC_DB=true
     depends_on:
       - db
+    volumes:
+      - uploads_data:/app/uploads
 
   client:
     build:
       context: ./client
       args:
-        - VITE_API_URL=http://localhost:5000
+        - VITE_API_URL=${VITE_API_URL}
     container_name: libre-akademi-client
     restart: always
     ports:
       - "80:80"
+    volumes:
+      - uploads_data:/usr/share/nginx/html/uploads:ro
     depends_on:
       server:
         condition: service_started
 
 volumes:
   db_data:
+  uploads_data:

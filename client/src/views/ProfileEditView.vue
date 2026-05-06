@@ -18,7 +18,7 @@ const profileData = ref({
   username: '',
   bio: '',
   age: null,
-  gender: 'Belirtmek İstemiyorum',
+  gender: 'prefer_not_to_say',
   phoneNumber: '',
   avatar: null,
   avatarPreview: ''
@@ -43,7 +43,7 @@ onMounted(async () => {
       username: data.username || '',
       bio: data.bio || '',
       age: data.age || null,
-      gender: data.gender || 'Belirtmek İstemiyorum',
+      gender: data.gender || 'prefer_not_to_say',
       phoneNumber: data.phoneNumber || '',
       avatar: null,
       avatarPreview: data.avatar || ''
@@ -210,9 +210,10 @@ const handleSocialConnect = (platform) => {
               <div class="input-group">
                 <label>Cinsiyet</label>
                 <select v-model="profileData.gender" class="form-select">
-                  <option value="Belirtmek İstemiyorum">Belirtmek İstemiyorum</option>
-                  <option value="Erkek">Erkek</option>
-                  <option value="Kadın">Kadın</option>
+                  <option value="prefer_not_to_say">Belirtmek İstemiyorum</option>
+                  <option value="male">Erkek</option>
+                  <option value="female">Kadın</option>
+                  <option value="other">Diğer</option>
                 </select>
               </div>
             </div>

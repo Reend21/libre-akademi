@@ -18,6 +18,8 @@ RUN npm run build
 FROM nginx:stable-alpine as production-stage
 
 COPY --from=build-stage /app/dist /usr/share/nginx/html
+# Replace default nginx config with hardened version (security headers, server_tokens off)
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 EXPOSE 80
 

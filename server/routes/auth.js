@@ -15,7 +15,7 @@ const generateToken = (id) => {
 // Rate limiter for auth endpoints
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 20, // 20 attempts per window
+  max: 10, // 10 attempts per window (OWASP recommendation)
   message: { message: 'Çok fazla deneme. Lütfen 15 dakika sonra tekrar deneyin.' },
   standardHeaders: true,
   legacyHeaders: false,
@@ -29,7 +29,9 @@ const registerValidation = [
     .isLength({ min: 3, max: 30 }).withMessage('Kullanıcı adı 3-30 karakter olmalıdır.')
     .matches(/^[a-zA-Z0-9_]+$/).withMessage('Kullanıcı adı sadece harf, rakam ve alt çizgi içerebilir.'),
   body('email').isEmail().withMessage('Geçerli bir e-posta adresi giriniz.').normalizeEmail(),
-  body('password').isLength({ min: 6 }).withMessage('Şifre en az 6 karakter olmalıdır.'),
+  body('password').isLength({ min: 8 }).withMessage('Şifre en az 8 karakter olmalıdır.'),
+  body('age').optional().isInt({ min: 1, max: 120 }).withMessage('Geçerli bir yaş giriniz.'),
+  body('gender').optional({ checkFalsy: true }).trim().isIn(['male', 'female', 'other', 'prefer_not_to_say']).withMessage('Geçerli bir cinsiyet değeri giriniz.'),
 ];
 
 const loginValidation = [
@@ -81,7 +83,7 @@ router.post('/register', authLimiter, registerValidation, async (req, res) => {
     });
   } catch (error) {
     console.error('Register error:', error);
-    res.status(500).json({ message: 'Sunucu hatası', error: error.message });
+    res.status(500).json({ message: 'Sunucu hatası' });
   }
 });
 
@@ -116,7 +118,7 @@ router.post('/login', authLimiter, loginValidation, async (req, res) => {
     }
   } catch (error) {
     console.error('Login error:', error);
-    res.status(500).json({ message: 'Sunucu hatası', error: error.message });
+    res.status(500).json({ message: 'Sunucu hatası' });
   }
 });
 
@@ -153,7 +155,8 @@ router.get('/me', protect, async (req, res) => {
       ongoingCourses
     });
   } catch (error) {
-    res.status(500).json({ message: 'Sunucu hatası', error: error.message });
+    console.error('Me error:', error);
+    res.status(500).json({ message: 'Sunucu hatası' });
   }
 });
 
@@ -173,7 +176,8 @@ router.put('/language', protect, async (req, res) => {
 
     res.json(userData);
   } catch (error) {
-    res.status(500).json({ message: 'Sunucu hatası', error: error.message });
+    console.error('Language update error:', error);
+    res.status(500).json({ message: 'Sunucu hatası' });
   }
 });
 

@@ -8,7 +8,7 @@ import { CATEGORY_STRUCTURE } from '../constants/categories'
 const router = useRouter()
 const authStore = useAuthStore()
 
-const categories = CATEGORY_STRUCTURE.map(c => c.name)
+const categories = CATEGORY_STRUCTURE.flatMap(c => c.subcategories.map(s => s.name))
 
 const loading = ref(false)
 const error = ref('')
@@ -20,7 +20,8 @@ const course = ref({
   category: '',
   description: '',
   coverImage: null,
-  coverImagePreview: ''
+  coverImagePreview: '',
+  donationEnabled: true
 })
 
 // Lessons Data
@@ -75,10 +76,29 @@ const onCoverChange = (e) => {
   }
 }
 
+const formatDuration = (seconds) => {
+  const h = Math.floor(seconds / 3600)
+  const m = Math.floor((seconds % 3600) / 60)
+  const s = Math.floor(seconds % 60)
+  return [h, m, s]
+    .map(v => v < 10 ? '0' + v : v)
+    .filter((v, i) => v !== '00' || i > 0)
+    .join(':')
+}
+
 const onVideoChange = (e, index) => {
   const file = e.target.files[0]
   if (file) {
     lessons.value[index].video = file
+    
+    // Automatically calculate duration
+    const video = document.createElement('video')
+    video.preload = 'metadata'
+    video.onloadedmetadata = () => {
+      window.URL.revokeObjectURL(video.src)
+      lessons.value[index].duration = formatDuration(video.duration)
+    }
+    video.src = URL.createObjectURL(file)
   }
 }
 
@@ -116,6 +136,7 @@ const publishCourse = async () => {
     courseFormData.append('title', course.value.title)
     courseFormData.append('category', course.value.category)
     courseFormData.append('description', course.value.description)
+    courseFormData.append('donationEnabled', course.value.donationEnabled)
     if (course.value.coverImage) {
       courseFormData.append('coverImage', course.value.coverImage)
     }
@@ -186,17 +207,19 @@ const publishCourse = async () => {
                 </div>
                 <div class="lesson-details">
                   <div class="lesson-row">
-                    <input type="text" v-model="lesson.duration" placeholder="Süre (Örn: 04:30)" class="lesson-input small-input" />
+                    <div v-if="lesson.duration" class="duration-badge">
+                      <i class="bi bi-clock-history"></i> {{ lesson.duration }}
+                    </div>
                     <textarea v-model="lesson.description" placeholder="Ders açıklaması..." class="lesson-input" rows="1"></textarea>
                   </div>
                   <div class="lesson-file-inputs">
                     <label class="file-btn" :class="{ 'has-file': lesson.video }">
                       <i class="bi bi-camera-video-fill"></i> <span class="truncate">{{ lesson.video ? lesson.video.name : 'Video Seç' }}</span>
-                      <input type="file" accept="video/*" @change="e => onVideoChange(e, index)" hidden />
+                      <input type="file" accept=".mp4,.mkv" @change="e => onVideoChange(e, index)" hidden />
                     </label>
                     <label class="file-btn" :class="{ 'has-file': lesson.thumbnail }">
                       <i class="bi bi-image-fill"></i> <span class="truncate">{{ lesson.thumbnail ? lesson.thumbnail.name : 'Küçük Resim Seç' }}</span>
-                      <input type="file" accept="image/*" @change="e => onLessonThumbnailChange(e, index)" hidden />
+                      <input type="file" accept=".webp,.jpg,.jpeg,.png" @change="e => onLessonThumbnailChange(e, index)" hidden />
                     </label>
                   </div>
                 </div>
@@ -231,14 +254,27 @@ const publishCourse = async () => {
           </div>
 
           <div class="input-group">
-            <label>Kurs Kapak Fotoğrafı</label>
+            <label>Kurs Kapak Fotoğrafı <span class="label-hint">Önerilen: 1280x720 (16:9)</span></label>
             <div class="cover-upload-area" :class="{ 'has-image': course.coverImagePreview }">
               <img v-if="course.coverImagePreview" :src="course.coverImagePreview" />
               <div v-else class="upload-placeholder">
                 <i class="bi bi-cloud-arrow-up"></i>
                 <span>Tıklayın veya sürükleyin</span>
               </div>
-              <input type="file" accept="image/*" @change="onCoverChange" class="absolute-input" />
+              <input type="file" accept=".webp,.jpg,.jpeg,.png" @change="onCoverChange" class="absolute-input" />
+            </div>
+          </div>
+
+          <div class="input-group">
+            <div class="donation-toggle">
+              <div class="toggle-info">
+                <label>Bağış Desteği</label>
+                <span>Öğrenciler kursunuzu desteklemek için bağış yapabilsin mi?</span>
+              </div>
+              <label class="switch">
+                <input type="checkbox" v-model="course.donationEnabled">
+                <span class="slider round"></span>
+              </label>
             </div>
           </div>
 
@@ -558,13 +594,115 @@ h3 {
 .input-group input, 
 .input-group select, 
 .input-group textarea {
-  padding: 0.85rem;
+  padding: 1rem;
   border-radius: 10px;
   border: 1px solid var(--border-color);
   background: var(--bg-primary);
   color: var(--text-primary);
   font-family: inherit;
+  font-size: 1.1rem;
   transition: all 0.2s;
+}
+
+.duration-badge {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  color: var(--accent);
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  white-space: nowrap;
+}
+
+.donation-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg-secondary);
+  padding: 1rem;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+}
+
+.toggle-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.toggle-info label {
+  margin: 0;
+}
+
+.label-hint {
+  font-size: 0.75rem;
+  color: var(--accent);
+  font-weight: normal;
+  margin-left: 0.5rem;
+}
+
+.toggle-info span {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+/* Switch Styles */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 50px;
+  height: 26px;
+  flex-shrink: 0;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  transition: .4s;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: var(--text-secondary);
+  transition: .4s;
+}
+
+input:checked + .slider {
+  background-color: var(--accent);
+  border-color: var(--accent);
+}
+
+input:checked + .slider:before {
+  transform: translateX(24px);
+  background-color: #000;
+}
+
+.slider.round {
+  border-radius: 34px;
+}
+
+.slider.round:before {
+  border-radius: 50%;
 }
 
 .input-group input:focus, 

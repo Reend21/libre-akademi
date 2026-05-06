@@ -8,7 +8,10 @@ RUN npm install
 
 COPY . .
 
-RUN mkdir -p uploads
+RUN mkdir -p uploads && chown -R node:node /app
+
+# Drop root — run as the built-in non-privileged 'node' user
+USER node
 
 EXPOSE 5000
 

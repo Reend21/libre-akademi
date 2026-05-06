@@ -70,14 +70,15 @@ router.get('/:id', async (req, res) => {
 
     res.json(mappedCourse);
   } catch (error) {
-    res.status(500).json({ message: 'Sunucu hatası', error: error.message });
+    console.error('Get course error:', error);
+    res.status(500).json({ message: 'Sunucu hatası' });
   }
 });
 
 // @route   POST /api/courses
 // @desc    Create a course
 router.post('/', protect, upload.single('coverImage'), async (req, res) => {
-  const { title, description, category } = req.body;
+  const { title, description, category, donationEnabled } = req.body;
   
   try {
     const course = await Course.create({
@@ -85,6 +86,7 @@ router.post('/', protect, upload.single('coverImage'), async (req, res) => {
       description,
       category,
       instructorId: req.user.id,
+      donationEnabled: donationEnabled === 'false' ? false : true,
       coverImage: req.file ? `/uploads/${req.file.filename}` : ''
     });
     
@@ -96,7 +98,8 @@ router.post('/', protect, upload.single('coverImage'), async (req, res) => {
     
     res.status(201).json(mappedCourse);
   } catch (error) {
-    res.status(500).json({ message: 'Kurs oluşturulurken bir hata oluştu.' });
+    console.error('Course creation error:', error);
+    res.status(500).json({ message: 'Kurs oluşturulurken bir hata oluştu.', error: error.message });
   }
 });
 
@@ -107,8 +110,10 @@ router.put('/:id/lessons', protect, upload.fields([{ name: 'video', maxCount: 1 
     const course = await Course.findByPk(req.params.id);
     if (!course) return res.status(404).json({ message: 'Kurs bulunamadı' });
 
-    if (course.instructorId !== req.user.id) {
-       return res.status(401).json({ message: 'Yetkisiz erişim' });
+    // Use parseInt on both sides — instructorId from DB may be integer while
+    // req.user.id from JWT payload may be decoded as a string, causing 1 !== "1".
+    if (parseInt(course.instructorId) !== parseInt(req.user.id)) {
+       return res.status(403).json({ message: 'Yetkisiz erişim' });
     }
 
     const { title, duration, description, order } = req.body;
@@ -144,7 +149,8 @@ router.put('/:id/lessons', protect, upload.fields([{ name: 'video', maxCount: 1 
 
     res.json(mappedCourse);
   } catch (error) {
-    res.status(500).json({ message: 'Sunucu hatası', error: error.message });
+    console.error('Add lesson error:', error);
+    res.status(500).json({ message: 'Sunucu hatası' });
   }
 });
 
@@ -196,10 +202,16 @@ router.post('/:id/progress', protect, async (req, res) => {
     
     if (!progress) {
       progress = await Progress.create({ courseId: req.params.id, userId: req.user.id });
-      // Reload to get the empty completions array
       progress = await Progress.findByPk(progress.id, {
         include: [{ model: CompletedLesson, as: 'completedLessons' }]
       });
+    }
+
+    // IDOR fix: verify the submitted lessonId actually belongs to THIS course.
+    // Without this check, an attacker can mark lessons from any other course as complete.
+    const validLesson = course.lessons.find(l => l.id === parseInt(lessonId));
+    if (!validLesson) {
+      return res.status(400).json({ message: 'Geçersiz ders ID’si' });
     }
 
     const alreadyCompleted = progress.completedLessons.find(c => c.lessonId === parseInt(lessonId));
@@ -223,7 +235,33 @@ router.post('/:id/progress', protect, async (req, res) => {
 
     res.json(mappedProgress);
   } catch (error) {
-    res.status(500).json({ message: 'Sunucu hatası', error: error.message });
+    console.error('Progress error:', error);
+    res.status(500).json({ message: 'Sunucu hatası' });
+  }
+});
+
+// @route   DELETE /api/courses/:id
+// @desc    Delete a course
+router.delete('/:id', protect, async (req, res) => {
+  try {
+    const course = await Course.findByPk(req.params.id);
+    
+    if (!course) {
+      return res.status(404).json({ message: 'Kurs bulunamadı' });
+    }
+
+    // Security: Only the instructor can delete the course
+    if (parseInt(course.instructorId) !== parseInt(req.user.id)) {
+      return res.status(403).json({ message: 'Bu kursu silme yetkiniz yok.' });
+    }
+
+    // Delete the course (cascading deletes for lessons/progress should be handled by DB constraints or hooks)
+    await course.destroy();
+
+    res.json({ message: 'Kurs başarıyla silindi.' });
+  } catch (error) {
+    console.error('Course deletion error:', error);
+    res.status(500).json({ message: 'Kurs silinirken bir sunucu hatası oluştu.' });
   }
 });
 

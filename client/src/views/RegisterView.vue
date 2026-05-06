@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { authApi } from '../api/auth'
@@ -13,12 +13,23 @@ const email = ref('')
 const password = ref('')
 const passwordConfirm = ref('')
 const age = ref('')
-const gender = ref('Belirtmek İstemiyorum')
+const gender = ref('prefer_not_to_say')
 const captchaInput = ref('')
 const num1 = ref(0)
 const num2 = ref(0)
 const error = ref('')
 const loading = ref(false)
+
+const validationErrors = computed(() => {
+  const errors = {}
+  if (fullName.value && fullName.value.trim().split(' ').length < 2) errors.fullName = 'Lütfen ad ve soyad girin.'
+  if (username.value && (username.value.length < 3 || /\s/.test(username.value))) errors.username = 'Kullanıcı adı en az 3 karakter olmalı ve boşluk içermemelidir.'
+  if (email.value && !/^\S+@\S+\.\S+$/.test(email.value)) errors.email = 'Geçerli bir e-posta adresi girin.'
+  if (password.value && password.value.length < 6) errors.password = 'Şifre en az 6 karakter olmalıdır.'
+  if (passwordConfirm.value && password.value !== passwordConfirm.value) errors.passwordConfirm = 'Şifreler eşleşmiyor.'
+  if (age.value && (age.value < 1 || age.value > 120)) errors.age = 'Geçerli bir yaş girin.'
+  return errors
+})
 
 const generateCaptcha = () => {
   num1.value = Math.floor(Math.random() * 10) + 1
@@ -106,30 +117,35 @@ const handleRegister = async () => {
           <div class="input-row">
             <div class="input-group">
               <label><i class="bi bi-person-fill"></i> Ad Soyad</label>
-              <input type="text" v-model="fullName" required placeholder="Can Yılmaz" />
+              <input type="text" v-model="fullName" :class="{ 'invalid': validationErrors.fullName }" required placeholder="Can Yılmaz" />
+              <span v-if="validationErrors.fullName" class="field-error">{{ validationErrors.fullName }}</span>
             </div>
             <div class="input-group">
               <label><i class="bi bi-at"></i> Kullanıcı Adı</label>
-              <input type="text" v-model="username" required placeholder="canyilmaz" />
+              <input type="text" v-model="username" :class="{ 'invalid': validationErrors.username }" required placeholder="canyilmaz" />
+              <span v-if="validationErrors.username" class="field-error">{{ validationErrors.username }}</span>
             </div>
           </div>
 
           <div class="input-group">
             <label><i class="bi bi-envelope-fill"></i> E-posta</label>
-            <input type="email" v-model="email" required placeholder="can@akademi.org" />
+            <input type="email" v-model="email" :class="{ 'invalid': validationErrors.email }" required placeholder="can@akademi.org" />
+            <span v-if="validationErrors.email" class="field-error">{{ validationErrors.email }}</span>
           </div>
 
           <div class="input-row">
             <div class="input-group">
               <label><i class="bi bi-calendar3"></i> Yaş</label>
-              <input type="number" v-model="age" placeholder="25" min="1" max="120" />
+              <input type="number" v-model="age" :class="{ 'invalid': validationErrors.age }" placeholder="25" min="1" max="120" />
+              <span v-if="validationErrors.age" class="field-error">{{ validationErrors.age }}</span>
             </div>
             <div class="input-group">
               <label><i class="bi bi-gender-ambiguous"></i> Cinsiyet</label>
               <select v-model="gender" class="form-select">
-                <option value="Belirtmek İstemiyorum">Belirtmek İstemiyorum</option>
-                <option value="Erkek">Erkek</option>
-                <option value="Kadın">Kadın</option>
+                <option value="prefer_not_to_say">Belirtmek İstemiyorum</option>
+                <option value="male">Erkek</option>
+                <option value="female">Kadın</option>
+                <option value="other">Diğer</option>
               </select>
             </div>
           </div>
@@ -137,11 +153,13 @@ const handleRegister = async () => {
           <div class="input-row">
             <div class="input-group">
               <label><i class="bi bi-lock-fill"></i> Şifre</label>
-              <input type="password" v-model="password" required placeholder="••••••••" />
+              <input type="password" v-model="password" :class="{ 'invalid': validationErrors.password }" required placeholder="••••••••" />
+              <span v-if="validationErrors.password" class="field-error">{{ validationErrors.password }}</span>
             </div>
             <div class="input-group">
               <label><i class="bi bi-lock-fill"></i> Şifre (Tekrar)</label>
-              <input type="password" v-model="passwordConfirm" required placeholder="••••••••" />
+              <input type="password" v-model="passwordConfirm" :class="{ 'invalid': validationErrors.passwordConfirm }" required placeholder="••••••••" />
+              <span v-if="validationErrors.passwordConfirm" class="field-error">{{ validationErrors.passwordConfirm }}</span>
             </div>
           </div>
 
@@ -150,7 +168,7 @@ const handleRegister = async () => {
             <input type="number" v-model="captchaInput" required placeholder="İşlem sonucunu yazınız" />
           </div>
 
-          <button type="submit" class="submit-btn" :disabled="loading">
+          <button type="submit" class="submit-btn" :disabled="loading || Object.keys(validationErrors).length > 0">
             <i v-if="!loading" class="bi bi-person-plus-fill"></i>
             <span v-else class="spinner"></span>
             {{ loading ? 'Hesap Oluşturuluyor...' : 'Kayıt Ol' }}
@@ -326,6 +344,17 @@ const handleRegister = async () => {
   outline: none;
   border-color: var(--accent);
   box-shadow: 0 0 0 4px rgba(215, 153, 33, 0.1);
+}
+
+.input-group input.invalid, .input-group select.invalid {
+  border-color: #fb4934;
+}
+
+.field-error {
+  color: #fb4934;
+  font-size: 0.8rem;
+  font-weight: 700;
+  margin-top: 0.25rem;
 }
 
 .submit-btn {

@@ -4,15 +4,28 @@ const { User, Course, Progress, Activity, CompletedLesson, Lesson } = require('.
 const { Op } = require('sequelize');
 const { protect } = require('../middleware/auth');
 const upload = require('../middleware/upload');
+const { verifyMagicBytes } = require('../middleware/verifyMagicBytes');
 const bcrypt = require('bcryptjs');
+const rateLimit = require('express-rate-limit');
+const fs = require('fs').promises;
+
+// Rate limiter for public profile lookups — prevents username enumeration scraping
+const profileLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 // @route   GET /api/users/:username
-// @desc    Get user profile by username
-router.get('/:username', async (req, res) => {
+// @desc    Get user profile by username (public — PII fields excluded)
+router.get('/:username', profileLimiter, async (req, res) => {
   try {
     const user = await User.findOne({
       where: { username: req.params.username },
-      attributes: { exclude: ['passwordHash'] },
+      // Exclude passwordHash and all PII fields from the public endpoint.
+      // Sensitive fields are only returned via the authenticated /api/auth/me route.
+      attributes: { exclude: ['passwordHash', 'email', 'phoneNumber', 'age', 'gender'] },
       include: [
         {
           model: Progress,
@@ -80,7 +93,8 @@ router.get('/:username', async (req, res) => {
     });
 
   } catch (error) {
-    res.status(500).json({ message: 'Sunucu hatası', error: error.message });
+    console.error('Get profile error:', error);
+    res.status(500).json({ message: 'Sunucu hatası' });
   }
 });
 
@@ -121,11 +135,17 @@ router.put('/profile', protect, handleAvatarUpload, async (req, res) => {
     user.linkedin = linkedin !== undefined ? linkedin : user.linkedin;
     
     if (req.file) {
+      // Verify magic bytes of the uploaded file — client-supplied MIME/extension is not trusted.
+      const isValid = await verifyMagicBytes(req.file.path);
+      if (!isValid) {
+        await fs.unlink(req.file.path).catch(() => {}); // Remove the rejected file
+        return res.status(400).json({ message: 'Geçersiz dosya türü. Sadece JPEG, PNG, MP4, MKV veya WebM kabul edilir.' });
+      }
       user.avatar = `/uploads/${req.file.filename}`;
-    } else if (req.body.avatar) {
-      // Allow URL string updates if sent instead of file
-      user.avatar = req.body.avatar;
     }
+    // NOTE: req.body.avatar string updates are intentionally not accepted.
+    // Accepting arbitrary URL strings is an SSRF/XSS vector and bypasses
+    // all file-type validation. Use file upload only.
 
     await user.save();
 
@@ -135,7 +155,8 @@ router.put('/profile', protect, handleAvatarUpload, async (req, res) => {
 
     res.json(userData);
   } catch (error) {
-    res.status(500).json({ message: 'Sunucu hatası', error: error.message });
+    console.error('Update profile error:', error);
+    res.status(500).json({ message: 'Sunucu hatası' });
   }
 });
 
@@ -143,6 +164,12 @@ router.put('/profile', protect, handleAvatarUpload, async (req, res) => {
 // @desc    Update password
 router.put('/password', protect, async (req, res) => {
   const { currentPassword, newPassword } = req.body;
+
+  // Validate new password before processing — no validation here allows
+  // an attacker to set an empty string password, locking out the owner.
+  if (!newPassword || typeof newPassword !== 'string' || newPassword.length < 8) {
+    return res.status(400).json({ message: 'Yeni şifre en az 8 karakter olmalıdır.' });
+  }
 
   try {
     const user = await User.findByPk(req.user.id);
@@ -159,7 +186,8 @@ router.put('/password', protect, async (req, res) => {
 
     res.json({ message: 'Şifreniz başarıyla güncellendi.' });
   } catch (error) {
-    res.status(500).json({ message: 'Sunucu hatası', error: error.message });
+    console.error('Password update error:', error);
+    res.status(500).json({ message: 'Sunucu hatası' });
   }
 });
 

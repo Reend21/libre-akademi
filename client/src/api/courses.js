@@ -34,5 +34,14 @@ export const coursesApi = {
   getCourse: async (id) => {
     const response = await fetch(`${API_URL}/courses/${id}`);
     return handleResponse(response);
+  },
+  deleteCourse: async (token, id) => {
+    const response = await fetch(`${API_URL}/courses/${id}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    return handleResponse(response);
   }
 };

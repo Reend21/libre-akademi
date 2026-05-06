@@ -36,9 +36,9 @@ const User = sequelize.define('User', {
     allowNull: true,
   },
   gender: {
-    type: DataTypes.ENUM('Erkek', 'Kadın', 'Belirtmek İstemiyorum'),
+    type: DataTypes.ENUM('male', 'female', 'other', 'prefer_not_to_say'),
     allowNull: true,
-    defaultValue: 'Belirtmek İstemiyorum'
+    defaultValue: 'prefer_not_to_say'
   },
   phoneNumber: {
     type: DataTypes.STRING,
