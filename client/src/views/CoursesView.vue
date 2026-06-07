@@ -3,6 +3,7 @@ import { ref, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { CATEGORY_STRUCTURE, POPULAR_CATEGORIES } from '../constants/categories'
 import { coursesApi } from '../api/courses'
+import SimpleIcon from '../components/SimpleIcon.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -11,6 +12,7 @@ const courses = ref([])
 const loading = ref(true)
 const searchQuery = ref(route.query.q || '')
 const selectedCategory = ref(route.query.category || '')
+const sortOption = ref(route.query.sort || 'newest')
 const openCategories = ref([])
 
 const toggleAccordion = (name) => {
@@ -24,7 +26,11 @@ const toggleAccordion = (name) => {
 const fetchCourses = async () => {
   loading.value = true
   try {
-    const data = await coursesApi.getAllCourses(searchQuery.value, selectedCategory.value)
+    const data = await coursesApi.getAllCourses(
+      searchQuery.value, 
+      selectedCategory.value, 
+      sortOption.value === 'newest' ? '' : sortOption.value
+    )
     courses.value = data.courses || data // Support both paginated and legacy response
   } catch (error) {
     console.error('Kurslar yüklenirken hata:', error)
@@ -60,8 +66,13 @@ const getCategoryIcon = (catName) => {
 watch(() => route.query, (newQuery) => {
   searchQuery.value = newQuery.q || ''
   selectedCategory.value = newQuery.category || ''
+  sortOption.value = newQuery.sort || 'newest'
   fetchCourses()
 }, { deep: true })
+
+watch(sortOption, (newVal) => {
+  updateFilters('sort', newVal === 'newest' ? '' : newVal)
+})
 
 onMounted(() => {
   // Open the category group if a subcategory is selected
@@ -90,7 +101,12 @@ onMounted(() => {
               :style="{ backgroundColor: pop.color + '15', color: pop.color, borderColor: pop.color + '44' }"
               @click="toggleCategory(pop.name)"
             >
-              <i :class="getCategoryIcon(pop.name)"></i>
+              <template v-if="getCategoryIcon(pop.name).startsWith('si-')">
+                <SimpleIcon :name="getCategoryIcon(pop.name)" size="24" />
+              </template>
+              <template v-else>
+                <i :class="getCategoryIcon(pop.name)"></i>
+              </template>
               <span>{{ pop.name }}</span>
             </button>
           </div>
@@ -108,7 +124,12 @@ onMounted(() => {
             >
               <div class="accordion-header" @click="toggleAccordion(mainCat.name)">
                 <div class="header-left">
-                  <i :class="mainCat.icon"></i>
+                  <template v-if="mainCat.icon.startsWith('si-')">
+                    <SimpleIcon :name="mainCat.icon" size="16" />
+                  </template>
+                  <template v-else>
+                    <i :class="mainCat.icon"></i>
+                  </template>
                   <span>{{ mainCat.name }}</span>
                 </div>
                 <i class="bi bi-chevron-down chevron"></i>
@@ -119,9 +140,15 @@ onMounted(() => {
                     v-for="sub in mainCat.subcategories" 
                     :key="sub.name"
                     :class="{ active: selectedCategory === sub.name }"
+                    :style="{ '--cat-color': sub.color || 'var(--accent)' }"
                     @click="toggleCategory(sub.name)"
                   >
-                    <i :class="sub.icon" class="sub-icon"></i>
+                    <template v-if="sub.icon.startsWith('si-')">
+                      <SimpleIcon :name="sub.icon" size="14" class="sub-icon" />
+                    </template>
+                    <template v-else>
+                      <i :class="sub.icon" class="sub-icon"></i>
+                    </template>
                     <span>{{ sub.name }}</span>
                   </li>
                 </ul>
@@ -141,6 +168,13 @@ onMounted(() => {
             </p>
             <p v-else>En yeni ve popüler kurslarımızı inceleyin.</p>
           </div>
+          <div class="header-actions">
+            <select v-model="sortOption" class="sort-select">
+              <option value="newest">En Yeni</option>
+              <option value="popular">En Popüler</option>
+              <option value="videos">Video Sayısına Göre</option>
+            </select>
+          </div>
         </header>
 
         <div v-if="loading" class="loading-state">
@@ -150,13 +184,18 @@ onMounted(() => {
 
         <div v-else-if="courses.length === 0" class="empty-state">
           <div class="empty-icon-wrapper">
-            <i class="bi bi-emoji-frown"></i>
+            <i class="bi bi-wind icon-empty"></i>
           </div>
-          <h2>Tüh, bu kategoride bir kurs yok</h2>
-          <p>Farklı bir kategori seçmeyi veya arama yapmayı deneyin.</p>
-          <button @click="selectedCategory = ''; searchQuery = ''; updateFilters()" class="clear-btn">
-            Tüm Kursları Gör
-          </button>
+          <h2>Bizde öyle bir kurs yok</h2>
+          <p>Aramayı farklı anahtar kelimelerle deneyin veya kursu siz ekleyin!</p>
+          <div style="display: flex; gap: 1rem; justify-content: center; margin-top: 1rem;">
+            <RouterLink to="/upload" class="clear-btn" style="background: var(--bg-card); color: var(--accent); border: 2px solid var(--accent);">
+              <i class="bi bi-plus-circle"></i> Kurs Ekle
+            </RouterLink>
+            <button @click="selectedCategory = ''; searchQuery = ''; updateFilters()" class="clear-btn">
+              Tüm Kursları Gör
+            </button>
+          </div>
         </div>
 
         <div v-else class="course-grid">
@@ -176,14 +215,14 @@ onMounted(() => {
                     <span>{{ course.averageRating.toFixed(1) }}</span>
                   </div>
                 </div>
-                <div class="card-footer">
+                <div class="category-tag-mini" style="margin: 0 -1.5rem 1.5rem -1.5rem;">{{ course.category }}</div>
+                <div class="card-footer" style="padding-top: 1rem; border-top: 1px solid var(--border-color); margin-top: auto;">
                   <div class="lesson-count">
                     <i class="bi bi-play-circle"></i>
                     <span>{{ course.lessons?.length || 0 }} Ders</span>
                   </div>
                   <RouterLink :to="`/courses/${course._id}`" class="enroll-btn"> İncele </RouterLink>
                 </div>
-                <div class="category-tag-mini">{{ course.category }}</div>
               </div>
             </div>
           </div>
@@ -245,7 +284,7 @@ onMounted(() => {
 
 .pop-card {
   padding: 0.8rem 1rem;
-  border-radius: 999px;
+  border-radius: 12px;
   border: 1px solid transparent;
   display: flex;
   align-items: center;
@@ -331,13 +370,13 @@ onMounted(() => {
 }
 
 .sub-cat-list li:hover {
-  background: var(--bg-card);
-  color: var(--accent);
+  background: color-mix(in srgb, var(--cat-color, var(--accent)) 12%, transparent);
+  color: var(--cat-color, var(--accent));
   transform: translateX(4px);
 }
 
 .sub-cat-list li.active {
-  background: var(--accent);
+  background: var(--cat-color, var(--accent));
   color: #fff;
 }
 
@@ -385,6 +424,25 @@ onMounted(() => {
   line-height: 1;
   cursor: pointer;
   padding: 0 0.2rem;
+}
+
+/* Sort Select */
+.sort-select {
+  padding: 0.6rem 1rem;
+  border-radius: 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  font-weight: 600;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.sort-select:hover {
+  border-color: var(--accent);
+}
+.sort-select:focus {
+  border-color: var(--accent);
 }
 
 /* Course Grid */
@@ -538,8 +596,9 @@ onMounted(() => {
 }
 
 .empty-icon-wrapper i {
-  font-size: 5rem;
+  font-size: 6rem;
   color: var(--accent);
+  opacity: 0.6;
 }
 
 .empty-state h2 {

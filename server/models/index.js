@@ -41,6 +41,10 @@ Review.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 Course.hasMany(Review, { foreignKey: 'courseId', as: 'reviews', onDelete: 'CASCADE' });
 Review.belongsTo(Course, { foreignKey: 'courseId', as: 'course' });
 
+// A Lesson has many Reviews
+Lesson.hasMany(Review, { foreignKey: 'lessonId', as: 'reviews', onDelete: 'CASCADE' });
+Review.belongsTo(Lesson, { foreignKey: 'lessonId', as: 'lesson' });
+
 // A User has many Activities
 User.hasMany(Activity, { foreignKey: 'userId', as: 'activities', onDelete: 'CASCADE' });
 Activity.belongsTo(User, { foreignKey: 'userId', as: 'user' });

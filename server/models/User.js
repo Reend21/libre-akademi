@@ -55,6 +55,46 @@ const User = sequelize.define('User', {
   preferredLanguage: {
     type: DataTypes.STRING,
     defaultValue: 'tr',
+  },
+  isPrivate: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+  },
+  googleId: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
+  githubId: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
+  theme: {
+    type: DataTypes.STRING,
+    defaultValue: 'dark',
+  },
+  passwordResetToken: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
+  passwordResetExpires: {
+    type: DataTypes.DATE,
+    allowNull: true,
+  },
+  recoveryEmail: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
+  recoveryCodes: {
+    type: DataTypes.TEXT, // Storing JSON string array of codes
+    allowNull: true,
+  },
+  twoFactorEnabled: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+  },
+  twoFactorSecret: {
+    type: DataTypes.STRING,
+    allowNull: true,
   }
 }, {
   timestamps: true,

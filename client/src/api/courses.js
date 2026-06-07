@@ -21,10 +21,11 @@ export const coursesApi = {
     });
     return handleResponse(response);
   },
-  getAllCourses: async (search = '', category = '', page = 1, limit = 20) => {
+  getAllCourses: async (search = '', category = '', sort = '', page = 1, limit = 20) => {
     const url = new URL(`${API_URL}/courses`);
     if (search) url.searchParams.append('search', search);
     if (category) url.searchParams.append('category', category);
+    if (sort) url.searchParams.append('sort', sort);
     url.searchParams.append('page', page);
     url.searchParams.append('limit', limit);
     
@@ -41,6 +42,17 @@ export const coursesApi = {
       headers: {
         'Authorization': `Bearer ${token}`
       }
+    });
+    return handleResponse(response);
+  },
+  addReview: async (token, courseId, data) => {
+    const response = await fetch(`${API_URL}/courses/${courseId}/reviews`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(data)
     });
     return handleResponse(response);
   }

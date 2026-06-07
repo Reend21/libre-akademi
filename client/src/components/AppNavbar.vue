@@ -21,10 +21,8 @@ const currentLang = ref(authStore.user?.preferredLanguage?.toUpperCase() || 'TR'
 const isLangDropdownOpen = ref(false)
 
 const langs = [
-  { code: 'AR', name: 'Arapça' },
   { code: 'TR', name: 'Türkçe' },
   { code: 'EN', name: 'İngilizce' },
-  { code: 'ES', name: 'İspanyolca' },
   { code: 'AZ', name: 'Azerbeycanca' }
 ]
 
@@ -71,11 +69,6 @@ watch(() => authStore.user?.preferredLanguage, (newLang) => {
     currentLang.value = newLang.toUpperCase()
   }
 })
-
-const handleLogout = () => {
-  authStore.logout()
-  router.push('/login')
-}
 </script>
 
 <template>
@@ -117,7 +110,6 @@ const handleLogout = () => {
         </template>
         <template v-else>
           <RouterLink to="/profile" class="nav-link" title="Profil"><i class="bi bi-person-circle"></i> {{ authStore.user?.name || 'Profil' }}</RouterLink>
-          <button @click="handleLogout" class="nav-link logout-btn" title="Çıkış Yap"><i class="bi bi-box-arrow-right"></i></button>
         </template>
 
         <div class="lang-selector">

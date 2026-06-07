@@ -4,6 +4,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const { connectDB } = require('./config/db');
+const passport = require('./config/passport');
 
 const app = express();
 
@@ -11,7 +12,7 @@ const app = express();
 // not the internal container IP.
 app.set('trust proxy', 1);
 
-// Connect to Database
+// Connect to db
 connectDB();
 
 // Security headers configuration
@@ -55,9 +56,9 @@ app.use(cors({
   credentials: true
 }));
 app.use(express.json());
+app.use(passport.initialize());
 
-// Rate limit on static uploads to prevent bandwidth exhaustion attacks
-// (500 MB video files served without throttling = trivial DoS vector)
+// Rate limit
 const uploadsLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100,

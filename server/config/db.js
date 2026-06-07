@@ -13,8 +13,7 @@ const sequelize = new Sequelize(
 );
 
 const connectDB = async (retries = 5) => {
-  // Validate DB_NAME before interpolating into raw SQL to prevent injection
-  // if the environment is ever compromised or misconfigured.
+  // anti sql injection
   const dbName = process.env.DB_NAME;
   if (!dbName || !/^[a-zA-Z0-9_]+$/.test(dbName)) {
     console.error('FATAL: DB_NAME is missing or contains invalid characters.');

@@ -13,6 +13,25 @@ const course = ref(null)
 const loading = ref(true)
 const error = ref('')
 const currentLessonIndex = ref(null) // Start with null for course overview
+const videoPlayerRef = ref(null)
+
+const saveVideoProgress = () => {
+  if (!videoPlayerRef.value || !currentLesson()) return
+  const time = videoPlayerRef.value.currentTime
+  const lessonId = currentLesson().id || currentLesson()._id
+  if (time > 5) { // Only save if watched for more than 5 seconds
+    localStorage.setItem(`libre_akademi_video_progress_${lessonId}`, time)
+  }
+}
+
+const restoreVideoProgress = () => {
+  if (!videoPlayerRef.value || !currentLesson()) return
+  const lessonId = currentLesson().id || currentLesson()._id
+  const savedTime = localStorage.getItem(`libre_akademi_video_progress_${lessonId}`)
+  if (savedTime && parseFloat(savedTime) > 0) {
+    videoPlayerRef.value.currentTime = parseFloat(savedTime)
+  }
+}
 
 // Deletion Modal State
 const showDeleteModal = ref(false)
@@ -22,6 +41,56 @@ const deleteConfirmation = ref({
   courseTitle: ''
 })
 const deleteLoading = ref(false)
+
+const newReview = ref({ rating: 0, comment: '' })
+const submittingReview = ref(false)
+
+const currentReviews = computed(() => {
+  if (!course.value) return []
+  if (currentLesson()) {
+    return currentLesson().reviews || []
+  }
+  return course.value.reviews || []
+})
+
+const submitReview = async () => {
+  if (newReview.value.rating === 0) return alert('Lütfen puan verin.')
+  if (!newReview.value.comment.trim()) return alert('Lütfen yorum yazın.')
+  
+  submittingReview.value = true
+  try {
+    const data = {
+      rating: newReview.value.rating,
+      comment: newReview.value.comment,
+      lessonId: currentLesson() ? currentLesson().id || currentLesson()._id : null
+    }
+    await coursesApi.addReview(authStore.token, course.value.id || course.value._id, data)
+    course.value = await coursesApi.getCourse(route.params.id)
+    newReview.value = { rating: 0, comment: '' }
+  } catch (err) {
+    alert(err.message || 'Değerlendirme gönderilemedi.')
+  } finally {
+    submittingReview.value = false
+  }
+}
+
+const watchlist = ref(JSON.parse(localStorage.getItem('libre_watchlist') || '[]'))
+
+const isInWatchlist = computed(() => {
+  if (!course.value) return false
+  return watchlist.value.includes(course.value.id || course.value._id)
+})
+
+const toggleWatchlist = () => {
+  const cId = course.value?.id || course.value?._id
+  if (!cId) return
+  if (isInWatchlist.value) {
+    watchlist.value = watchlist.value.filter(id => id !== cId)
+  } else {
+    watchlist.value.push(cId)
+  }
+  localStorage.setItem('libre_watchlist', JSON.stringify(watchlist.value))
+}
 
 const isOwner = computed(() => {
   if (!course.value || !authStore.user) return false
@@ -60,6 +129,31 @@ const selectLesson = (index) => {
   currentLessonIndex.value = index
 }
 
+const seekVideo = (time) => {
+  if (videoPlayerRef.value) {
+    videoPlayerRef.value.currentTime = time
+    videoPlayerRef.value.play()
+  }
+}
+
+const parsedTimestamps = computed(() => {
+  if (!currentLesson()?.timestamps) return []
+  const lines = currentLesson().timestamps.split('\n')
+  return lines.map(line => {
+    const match = line.match(/^(\d{1,2}:)?(\d{1,2}):(\d{2})/)
+    if (match) {
+      const timeStr = match[0]
+      const label = line.replace(timeStr, '').trim()
+      const parts = timeStr.split(':').map(Number)
+      let time = 0
+      if (parts.length === 3) time = parts[0]*3600 + parts[1]*60 + parts[2]
+      else time = parts[0]*60 + parts[1]
+      return { time, display: timeStr, label: label || 'Bölüm' }
+    }
+    return null
+  }).filter(Boolean)
+})
+
 const handleDeleteCourse = async () => {
   if (!canDelete.value) return
   
@@ -85,12 +179,15 @@ const handleDeleteCourse = async () => {
         <div class="video-wrapper glass">
           <video 
             v-if="currentLesson()" 
+            ref="videoPlayerRef"
             controls 
             class="video-player" 
             :key="currentLessonIndex" 
             :src="getVideoUrl(currentLesson().videoUrl)"
             crossorigin="anonymous"
             autoplay
+            @timeupdate="saveVideoProgress"
+            @loadedmetadata="restoreVideoProgress"
           >
             Tarayıcınız video etiketini desteklemiyor.
           </video>
@@ -116,6 +213,12 @@ const handleDeleteCourse = async () => {
               </div>
               
               <div class="header-actions">
+                <!-- Watchlist Button -->
+                <button @click="toggleWatchlist" class="btn btn-outline btn-sm" :title="isInWatchlist ? 'Listeden Çıkar' : 'İzleme Listesine Ekle'" style="padding: 0.5rem 1rem; border-radius: 8px; font-weight: 600; display: flex; align-items: center; gap: 0.5rem;">
+                  <i class="bi" :class="isInWatchlist ? 'bi-bookmark-fill' : 'bi-bookmark'" style="color: var(--accent);"></i>
+                  {{ isInWatchlist ? 'Listede' : 'İzleme Listesi' }}
+                </button>
+                
                 <!-- Donation Button (Pink Theme) -->
                 <button v-if="course.donationEnabled" class="donation-btn" title="Eğitmene Bağış Yap">
                   <i class="bi bi-heart-fill"></i>
@@ -153,14 +256,52 @@ const handleDeleteCourse = async () => {
           <hr class="divider" />
 
           <div class="content-body">
-            <div class="tabs">
-              <button class="tab-btn active">
-                {{ currentLesson() ? 'Ders Hakkında' : 'Kurs Hakkında' }}
-              </button>
-            </div>
             <div class="tab-content mt-4">
               <p class="description">{{ currentLesson()?.description || course.description }}</p>
+              
+              <div v-if="parsedTimestamps.length > 0" class="timestamps-section mt-4">
+                <h4><i class="bi bi-clock-history"></i> Bölümler</h4>
+                <div class="timestamp-list">
+                  <button 
+                    v-for="ts in parsedTimestamps" 
+                    :key="ts.time" 
+                    @click="seekVideo(ts.time)"
+                    class="timestamp-btn"
+                  >
+                    <span class="ts-time">{{ ts.display }}</span>
+                    <span class="ts-label">{{ ts.label }}</span>
+                  </button>
+                </div>
+              </div>
             </div>
+          </div>
+        </div>
+
+        <!-- Reviews Section -->
+        <div class="reviews-section glass mt-4">
+          <h3><i class="bi bi-chat-text-fill"></i> Değerlendirmeler</h3>
+          
+          <div v-if="authStore.isLoggedIn" class="add-review-form">
+            <h4>Değerlendirme Yap</h4>
+            <div class="rating-select">
+              <i v-for="i in 5" :key="i" class="bi" :class="i <= newReview.rating ? 'bi-star-fill' : 'bi-star'" @click="newReview.rating = i"></i>
+            </div>
+            <textarea v-model="newReview.comment" placeholder="Yorumunuz..." rows="3"></textarea>
+            <button @click="submitReview" :disabled="submittingReview">{{ submittingReview ? 'Gönderiliyor...' : 'Gönder' }}</button>
+          </div>
+          <div v-else class="add-review-form">
+            <p>Değerlendirme yapmak için <RouterLink to="/login" style="color:var(--accent)">giriş yapın</RouterLink>.</p>
+          </div>
+          
+          <div class="reviews-list mt-4">
+            <div v-for="review in currentReviews" :key="review.id" class="review-item">
+              <div class="review-header">
+                <strong><i class="bi bi-person-circle"></i> {{ review.user?.username || 'Kullanıcı' }}</strong>
+                <span class="stars"><i v-for="i in 5" :key="i" class="bi" :class="i <= review.rating ? 'bi-star-fill' : 'bi-star'"></i></span>
+              </div>
+              <p>{{ review.comment }}</p>
+            </div>
+            <p v-if="!currentReviews.length">Henüz değerlendirme yok. İlk yapan siz olun!</p>
           </div>
         </div>
       </div>
@@ -512,6 +653,107 @@ const handleDeleteCourse = async () => {
   line-height: 1.8;
   color: var(--text-secondary);
   font-size: 1.05rem;
+}
+
+/* Timestamps */
+.timestamps-section h4 {
+  font-size: 1.1rem;
+  color: var(--text-primary);
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.timestamp-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.timestamp-btn {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: left;
+  width: fit-content;
+  min-width: 250px;
+}
+
+.timestamp-btn:hover {
+  background: rgba(215, 153, 33, 0.1);
+  border-color: var(--accent);
+}
+
+.ts-time {
+  color: var(--accent);
+  font-weight: 800;
+  font-family: monospace;
+  font-size: 1rem;
+}
+
+.ts-label {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+/* Reviews */
+.reviews-section {
+  padding: 2rem;
+}
+.reviews-section h3 {
+  font-size: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+.add-review-form {
+  background: var(--bg-secondary);
+  padding: 1.5rem;
+  border-radius: 12px;
+  margin-bottom: 2rem;
+  border: 1px solid var(--border-color);
+}
+.rating-select {
+  font-size: 1.5rem;
+  color: var(--accent);
+  cursor: pointer;
+  margin-bottom: 1rem;
+}
+.add-review-form textarea {
+  width: 100%;
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  margin-bottom: 1rem;
+  resize: vertical;
+}
+.add-review-form button {
+  background: var(--accent);
+  color: #000;
+  padding: 0.8rem 2rem;
+  border: none;
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
+}
+.review-item {
+  background: var(--bg-secondary);
+  padding: 1.5rem;
+  border-radius: 12px;
+  margin-bottom: 1rem;
+  border: 1px solid var(--border-color);
+}
+.review-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
 }
 
 /* Playlist Sidebar */

@@ -42,6 +42,7 @@ const addLesson = () => {
     title: '',
     duration: '',
     description: '',
+    timestamps: '',
     video: null,
     thumbnail: null
   })
@@ -152,6 +153,7 @@ const publishCourse = async () => {
       lessonFormData.append('order', i) // Save the drag-drop order
       if (lesson.duration) lessonFormData.append('duration', lesson.duration)
       if (lesson.description) lessonFormData.append('description', lesson.description)
+      if (lesson.timestamps) lessonFormData.append('timestamps', lesson.timestamps)
       if (lesson.video) lessonFormData.append('video', lesson.video)
       if (lesson.thumbnail) lessonFormData.append('thumbnail', lesson.thumbnail)
 
@@ -211,6 +213,9 @@ const publishCourse = async () => {
                       <i class="bi bi-clock-history"></i> {{ lesson.duration }}
                     </div>
                     <textarea v-model="lesson.description" placeholder="Ders açıklaması..." class="lesson-input" rows="1"></textarea>
+                  </div>
+                  <div class="lesson-row">
+                    <textarea v-model="lesson.timestamps" placeholder="Zaman damgaları (Örn: 01:20 Giriş\n05:30 Kurulum)" class="lesson-input" rows="1"></textarea>
                   </div>
                   <div class="lesson-file-inputs">
                     <label class="file-btn" :class="{ 'has-file': lesson.video }">

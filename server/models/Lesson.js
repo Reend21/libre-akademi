@@ -24,6 +24,9 @@ const Lesson = sequelize.define('Lesson', {
   thumbnail: {
     type: DataTypes.STRING,
   },
+  timestamps: {
+    type: DataTypes.TEXT, // Store as plain text like "00:00 Giriş\n01:30 Kurulum"
+  },
   order: {
     type: DataTypes.INTEGER,
     defaultValue: 0

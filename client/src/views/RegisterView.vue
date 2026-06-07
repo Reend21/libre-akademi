@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { authApi } from '../api/auth'
@@ -14,9 +14,6 @@ const password = ref('')
 const passwordConfirm = ref('')
 const age = ref('')
 const gender = ref('prefer_not_to_say')
-const captchaInput = ref('')
-const num1 = ref(0)
-const num2 = ref(0)
 const error = ref('')
 const loading = ref(false)
 
@@ -31,23 +28,8 @@ const validationErrors = computed(() => {
   return errors
 })
 
-const generateCaptcha = () => {
-  num1.value = Math.floor(Math.random() * 10) + 1
-  num2.value = Math.floor(Math.random() * 10) + 1
-}
-
-onMounted(() => {
-  generateCaptcha()
-})
-
 const handleRegister = async () => {
   error.value = ''
-  if (parseInt(captchaInput.value) !== num1.value + num2.value) {
-    error.value = 'Captcha hatalı, lütfen tekrar deneyin.'
-    generateCaptcha()
-    captchaInput.value = ''
-    return
-  }
   if (password.value !== passwordConfirm.value) {
     error.value = 'Şifreler eşleşmiyor.'
     return
@@ -117,19 +99,19 @@ const handleRegister = async () => {
           <div class="input-row">
             <div class="input-group">
               <label><i class="bi bi-person-fill"></i> Ad Soyad</label>
-              <input type="text" v-model="fullName" :class="{ 'invalid': validationErrors.fullName }" required placeholder="Can Yılmaz" />
+              <input type="text" v-model="fullName" :class="{ 'invalid': validationErrors.fullName }" required placeholder="Edward Snowden" />
               <span v-if="validationErrors.fullName" class="field-error">{{ validationErrors.fullName }}</span>
             </div>
             <div class="input-group">
               <label><i class="bi bi-at"></i> Kullanıcı Adı</label>
-              <input type="text" v-model="username" :class="{ 'invalid': validationErrors.username }" required placeholder="canyilmaz" />
+              <input type="text" v-model="username" :class="{ 'invalid': validationErrors.username }" required placeholder="edwardsnowden" />
               <span v-if="validationErrors.username" class="field-error">{{ validationErrors.username }}</span>
             </div>
           </div>
 
           <div class="input-group">
             <label><i class="bi bi-envelope-fill"></i> E-posta</label>
-            <input type="email" v-model="email" :class="{ 'invalid': validationErrors.email }" required placeholder="can@akademi.org" />
+            <input type="email" v-model="email" :class="{ 'invalid': validationErrors.email }" required placeholder="edward@akademi.org" />
             <span v-if="validationErrors.email" class="field-error">{{ validationErrors.email }}</span>
           </div>
 
@@ -163,16 +145,26 @@ const handleRegister = async () => {
             </div>
           </div>
 
-          <div class="input-group captcha-group">
-            <label><i class="bi bi-shield-lock-fill"></i> Doğrulama: {{ num1 }} + {{ num2 }} = ?</label>
-            <input type="number" v-model="captchaInput" required placeholder="İşlem sonucunu yazınız" />
-          </div>
+
 
           <button type="submit" class="submit-btn" :disabled="loading || Object.keys(validationErrors).length > 0">
             <i v-if="!loading" class="bi bi-person-plus-fill"></i>
             <span v-else class="spinner"></span>
             {{ loading ? 'Hesap Oluşturuluyor...' : 'Kayıt Ol' }}
           </button>
+
+          <div class="oauth-divider">
+            <span>Gel ablam gel tek tıkla logine gel!</span>
+          </div>
+          
+          <div class="oauth-buttons">
+            <a href="http://localhost:5000/api/auth/google" class="oauth-btn google-btn">
+              <i class="bi bi-google"></i> Google
+            </a>
+            <a href="http://localhost:5000/api/auth/github" class="oauth-btn github-btn">
+              <i class="bi bi-github"></i> GitHub
+            </a>
+          </div>
         </form>
 
         <div class="form-footer">
@@ -350,6 +342,16 @@ const handleRegister = async () => {
   border-color: #fb4934;
 }
 
+/* Remove arrows from number input */
+.input-group input[type="number"]::-webkit-outer-spin-button,
+.input-group input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.input-group input[type="number"] {
+  -moz-appearance: textfield;
+}
+
 .field-error {
   color: #fb4934;
   font-size: 0.8rem;
@@ -425,6 +427,55 @@ const handleRegister = async () => {
   font-weight: 700;
   color: var(--accent);
 }
+
+.oauth-divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  color: var(--text-secondary);
+  margin: 0.5rem 0;
+}
+
+.oauth-divider::before, .oauth-divider::after {
+  content: '';
+  flex: 1;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.oauth-divider span {
+  padding: 0 1rem;
+  font-size: 0.9rem;
+}
+
+.oauth-buttons {
+  display: flex;
+  gap: 1rem;
+}
+
+.oauth-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.8rem;
+  border-radius: 12px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.2s;
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+  color: var(--text-primary);
+}
+
+.oauth-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 10px rgba(0,0,0,0.1);
+  background: var(--bg-primary);
+}
+
+.google-btn i { color: #ea4335; }
+.github-btn i { color: var(--text-primary); }
 
 @media (max-width: 992px) {
   .auth-wrapper {

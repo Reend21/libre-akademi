@@ -22,16 +22,26 @@ router.get('/', async (req, res) => {
     const limit = Math.min(parseInt(req.query.limit) || 20, 100);
     const offset = (page - 1) * limit;
 
+    let orderClause = [['createdAt', 'DESC']];
+    if (req.query.sort === 'popular') orderClause = [['averageRating', 'DESC']];
+    else if (req.query.sort === 'newest') orderClause = [['createdAt', 'DESC']];
+
     const { count, rows: courses } = await Course.findAndCountAll({
       where: whereClause,
       include: [
-        { model: User, as: 'instructor', attributes: ['id', 'username', 'avatar'] }
+        { model: User, as: 'instructor', attributes: ['id', 'username', 'avatar'] },
+        { model: Lesson, as: 'lessons', attributes: ['id'] }
       ],
       limit,
       offset,
-      order: [['createdAt', 'DESC']]
+      order: orderClause,
+      distinct: true
     });
     
+    // Custom sort for video count if needed since Sequelize group+count can be tricky with distinct
+    if (req.query.sort === 'videos') {
+      courses.sort((a, b) => (b.lessons?.length || 0) - (a.lessons?.length || 0));
+    }
     const mappedCourses = courses.map(c => {
       const json = c.toJSON();
       json._id = json.id;
@@ -57,7 +67,13 @@ router.get('/:id', async (req, res) => {
     const course = await Course.findByPk(req.params.id, {
       include: [
         { model: User, as: 'instructor', attributes: ['id', 'username', 'bio', 'avatar'] },
-        { model: Lesson, as: 'lessons' }
+        { 
+          model: Lesson, as: 'lessons',
+          include: [
+            { model: Review, as: 'reviews', include: [{ model: User, as: 'user', attributes: ['username', 'avatar'] }] }
+          ]
+        },
+        { model: Review, as: 'reviews', include: [{ model: User, as: 'user', attributes: ['username', 'avatar'] }] }
       ]
     });
 
@@ -116,7 +132,7 @@ router.put('/:id/lessons', protect, upload.fields([{ name: 'video', maxCount: 1 
        return res.status(403).json({ message: 'Yetkisiz erişim' });
     }
 
-    const { title, duration, description, order } = req.body;
+    const { title, duration, description, order, timestamps } = req.body;
     
     let videoUrl = '';
     let thumbnailUrl = '';
@@ -134,6 +150,7 @@ router.put('/:id/lessons', protect, upload.fields([{ name: 'video', maxCount: 1 
       description,
       thumbnail: thumbnailUrl,
       videoUrl,
+      timestamps,
       order: order || 0,
       courseId: course.id
     });
@@ -157,19 +174,27 @@ router.put('/:id/lessons', protect, upload.fields([{ name: 'video', maxCount: 1 
 // @route   POST /api/courses/:id/reviews
 // @desc    Add a review
 router.post('/:id/reviews', protect, async (req, res) => {
-  const { rating, comment } = req.body;
+  const { rating, comment, lessonId } = req.body;
   try {
     const course = await Course.findByPk(req.params.id);
     if (!course) return res.status(404).json({ message: 'Kurs bulunamadı' });
 
-    const alreadyReviewed = await Review.findOne({ where: { courseId: req.params.id, userId: req.user.id } });
+    if (lessonId) {
+      const alreadyReviewed = await Review.findOne({ where: { lessonId, userId: req.user.id } });
+      if (alreadyReviewed) return res.status(400).json({ message: 'Bu videoyu zaten değerlendirdiniz.' });
+      
+      await Review.create({ courseId: req.params.id, lessonId, userId: req.user.id, rating, comment });
+      return res.status(201).json({ message: 'Video değerlendirmesi eklendi' });
+    }
+
+    const alreadyReviewed = await Review.findOne({ where: { courseId: req.params.id, lessonId: null, userId: req.user.id } });
     if (alreadyReviewed) return res.status(400).json({ message: 'Kursu zaten incelediniz' });
 
     await Review.create({ courseId: req.params.id, userId: req.user.id, rating, comment });
     
     // F09: Use SQL AVG instead of loading all reviews into memory
     const result = await Review.findOne({
-      where: { courseId: req.params.id },
+      where: { courseId: req.params.id, lessonId: null },
       attributes: [
         [fn('AVG', col('rating')), 'avg']
       ],

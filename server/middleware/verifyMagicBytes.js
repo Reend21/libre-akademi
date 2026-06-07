@@ -1,8 +1,7 @@
 const fs = require('fs').promises;
 
 /**
- * Verifies a file's actual type by reading its magic bytes (file signature).
- * This prevents MIME type spoofing via the client-controlled Content-Type header.
+ * MIME protect
  * @param {string} filePath - Absolute or relative path to the saved file
  * @returns {Promise<boolean>} true if the file matches an allowed type, false otherwise
  */

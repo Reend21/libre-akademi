@@ -19,7 +19,7 @@ const currentMinimalLogo = computed(() => {
         <div class="footer-logo">
           <img :src="currentMinimalLogo" alt="Libre Akademi Minimal Logo" height="50">
         </div>
-        <p class="footer-desc">Açık kaynaklı ve özgür eğitim platformu. Yazılımın kopyalarını alan herkesin kaynak koduna erişme ve onu geliştirme hakkı vardır.</p>
+        <p class="footer-desc">Açık kaynaklı ve özgür eğitim platformu. Yazılımın kopyalarını alan herkesin kaynak koduna erişme ve onu geliştirme hakkı vardır. Tabii lisansa uyarsanız...</p>
         <div class="footer-license">
           <a href="https://www.gnu.org/licenses/agpl-3.0.html" target="_blank">
             <i class="bi bi-file-earmark-code"></i> GNU AGPL v3.0 Lisansı

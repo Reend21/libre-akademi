@@ -209,7 +209,7 @@ const infoCards = [
           <div v-if="!homeData.featured && homeData.popular.length === 0 && homeData.categories.length === 0" class="empty-home-state container">
              <div class="empty-hero-full glass animate-fade-in">
                <i class="bi bi-wind icon-empty"></i>
-               <h2>Henüz burada keşfedilecek bir şey yok...</h2>
+               <h2>Buralar hep dutluktu...</h2>
                <p>Görünüşe göre sistemde henüz hiç kurs yok. İlk kursu sen yüklemek ister misin?</p>
                <RouterLink to="/upload" class="btn-hero-primary mt-4">
                  <i class="bi bi-plus-circle"></i> İlk Kursu Yükle

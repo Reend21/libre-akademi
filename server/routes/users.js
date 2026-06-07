@@ -17,87 +17,6 @@ const profileLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-// @route   GET /api/users/:username
-// @desc    Get user profile by username (public — PII fields excluded)
-router.get('/:username', profileLimiter, async (req, res) => {
-  try {
-    const user = await User.findOne({
-      where: { username: req.params.username },
-      // Exclude passwordHash and all PII fields from the public endpoint.
-      // Sensitive fields are only returned via the authenticated /api/auth/me route.
-      attributes: { exclude: ['passwordHash', 'email', 'phoneNumber', 'age', 'gender'] },
-      include: [
-        {
-          model: Progress,
-          as: 'progresses',
-          include: [{ model: Course, as: 'course' }]
-        },
-        {
-          model: Course,
-          as: 'publishedCourses'
-        },
-        {
-          model: Activity,
-          as: 'activities',
-          where: {
-            date: { [Op.gte]: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000) }
-          },
-          required: false
-        }
-      ]
-    });
-
-    if (!user) {
-      return res.status(404).json({ message: 'Kullanıcı bulunamadı' });
-    }
-
-    const userData = user.toJSON();
-    userData._id = userData.id;
-
-    // Format output
-    const completedCourses = userData.progresses.filter(p => p.isCompleted && p.course).map(p => {
-      const c = p.course;
-      c._id = c.id;
-      return c;
-    });
-    
-    const ongoingCourses = userData.progresses.filter(p => !p.isCompleted && p.course).map(p => {
-      const c = p.course;
-      c._id = c.id;
-      return c;
-    });
-
-    if (userData.publishedCourses) {
-      userData.publishedCourses = userData.publishedCourses.map(c => {
-        c._id = c.id;
-        return c;
-      });
-    }
-
-    // Contribution graph data
-    const contributionMap = {};
-    if (userData.activities) {
-      userData.activities.forEach(act => {
-        if (!contributionMap[act.date]) {
-          contributionMap[act.date] = 0;
-        }
-        contributionMap[act.date]++;
-      });
-    }
-
-    res.json({
-      ...userData,
-      completedCourses,
-      ongoingCourses,
-      contributions: contributionMap
-    });
-
-  } catch (error) {
-    console.error('Get profile error:', error);
-    res.status(500).json({ message: 'Sunucu hatası' });
-  }
-});
-
 // Custom middleware to handle multer errors gracefully
 const handleAvatarUpload = (req, res, next) => {
   const uploader = upload.single('avatar');
@@ -112,7 +31,7 @@ const handleAvatarUpload = (req, res, next) => {
 // @route   PUT /api/users/profile
 // @desc    Update user profile
 router.put('/profile', protect, handleAvatarUpload, async (req, res) => {
-  const { name, username, bio, age, gender, phoneNumber, github, google, linkedin } = req.body;
+  const { name, username, bio, age, gender, phoneNumber, github, google, linkedin, isPrivate, theme, preferredLanguage } = req.body;
 
   try {
     const user = await User.findByPk(req.user.id);
@@ -133,6 +52,9 @@ router.put('/profile', protect, handleAvatarUpload, async (req, res) => {
     user.github = github !== undefined ? github : user.github;
     user.google = google !== undefined ? google : user.google;
     user.linkedin = linkedin !== undefined ? linkedin : user.linkedin;
+    user.isPrivate = isPrivate !== undefined ? isPrivate : user.isPrivate;
+    user.theme = theme !== undefined ? theme : user.theme;
+    user.preferredLanguage = preferredLanguage !== undefined ? preferredLanguage : user.preferredLanguage;
     
     if (req.file) {
       // Verify magic bytes of the uploaded file — client-supplied MIME/extension is not trusted.
@@ -190,5 +112,207 @@ router.put('/password', protect, async (req, res) => {
     res.status(500).json({ message: 'Sunucu hatası' });
   }
 });
+
+// @route   PUT /api/users/recovery-email
+// @desc    Update recovery email
+router.put('/recovery-email', protect, async (req, res) => {
+  const { recoveryEmail } = req.body;
+  try {
+    const user = await User.findByPk(req.user.id);
+    if (!user) return res.status(404).json({ message: 'Kullanıcı bulunamadı.' });
+
+    // Validate email format basic
+    if (recoveryEmail && !/^\S+@\S+\.\S+$/.test(recoveryEmail)) {
+      return res.status(400).json({ message: 'Geçerli bir e-posta adresi giriniz.' });
+    }
+
+    user.recoveryEmail = recoveryEmail || null;
+    await user.save();
+
+    res.json({ message: 'Kurtarma e-postası başarıyla güncellendi.', recoveryEmail: user.recoveryEmail });
+  } catch (error) {
+    console.error('Recovery email error:', error);
+    res.status(500).json({ message: 'Sunucu hatası' });
+  }
+});
+
+// @route   DELETE /api/users/me
+// @desc    Delete user account
+router.delete('/me', protect, async (req, res) => {
+  const { password } = req.body;
+  try {
+    const user = await User.findByPk(req.user.id);
+    if (!user) return res.status(404).json({ message: 'Kullanıcı bulunamadı.' });
+
+    const isMatch = await bcrypt.compare(password, user.passwordHash);
+    if (!isMatch) {
+      return res.status(400).json({ message: 'Şifre hatalı. Hesap silinemedi.' });
+    }
+
+    await user.destroy();
+    res.json({ message: 'Hesabınız başarıyla silindi.' });
+  } catch (error) {
+    console.error('Delete account error:', error);
+    res.status(500).json({ message: 'Sunucu hatası' });
+  }
+});
+
+// @route   GET /api/users/me/courses
+// @desc    Get user's published courses
+router.get('/me/courses', protect, async (req, res) => {
+  try {
+    const courses = await Course.findAll({
+      where: { instructorId: req.user.id },
+      order: [['createdAt', 'DESC']]
+    });
+    
+    // Map _id for frontend compatibility
+    const mappedCourses = courses.map(c => {
+      const data = c.toJSON();
+      data._id = data.id;
+      return data;
+    });
+
+    res.json(mappedCourses);
+  } catch (error) {
+    console.error('Get my courses error:', error);
+    res.status(500).json({ message: 'Sunucu hatası' });
+  }
+});
+
+// @route   GET /api/users/me/completed-courses
+// @desc    Get user's completed courses
+router.get('/me/completed-courses', protect, async (req, res) => {
+  try {
+    const user = await User.findByPk(req.user.id, {
+      include: [
+        {
+          model: Progress,
+          as: 'progresses',
+          where: { isCompleted: true },
+          include: [{ model: Course, as: 'course' }]
+        }
+      ]
+    });
+
+    if (!user) {
+      return res.json([]);
+    }
+
+    const completedCourses = user.progresses.map(p => {
+      const c = p.course.toJSON();
+      c._id = c.id;
+      return c;
+    });
+
+    res.json(completedCourses);
+  } catch (error) {
+    console.error('Get completed courses error:', error);
+    res.status(500).json({ message: 'Sunucu hatası' });
+  }
+});
+
+// @route   GET /api/users/:username
+// @desc    Get user profile by username (public — PII fields excluded)
+router.get('/:username', profileLimiter, async (req, res) => {
+  try {
+    const user = await User.findOne({
+      where: { username: req.params.username },
+      // Exclude passwordHash and all PII fields from the public endpoint.
+      // Sensitive fields are only returned via the authenticated /api/auth/me route.
+      attributes: { exclude: ['passwordHash', 'email', 'phoneNumber', 'age', 'gender'] },
+      include: [
+        {
+          model: Progress,
+          as: 'progresses',
+          include: [{ model: Course, as: 'course' }]
+        },
+        {
+          model: require('../models').Review,
+          as: 'reviews',
+          include: [
+            { model: Course, as: 'course', attributes: ['id', 'title'] },
+            { model: Lesson, as: 'lesson', attributes: ['id', 'title'] }
+          ]
+        },
+        {
+          model: Course,
+          as: 'publishedCourses'
+        },
+        {
+          model: Activity,
+          as: 'activities',
+          where: {
+            date: { [Op.gte]: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000) }
+          },
+          required: false
+        }
+      ]
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: 'Kullanıcı bulunamadı' });
+    }
+    
+    // Privacy check: If profile is private and requested by someone else, return limited info
+    if (user.isPrivate && (!req.user || req.user.id !== user.id)) {
+      return res.json({
+        id: user.id,
+        _id: user.id,
+        name: user.name,
+        username: user.username,
+        avatar: user.avatar,
+        isPrivate: true,
+        message: 'Bu hesap gizlidir.'
+      });
+    }
+
+    const userData = user.toJSON();
+    userData._id = userData.id;
+
+    // Format output
+    const completedCourses = userData.progresses.filter(p => p.isCompleted && p.course).map(p => {
+      const c = p.course;
+      c._id = c.id;
+      return c;
+    });
+    
+    const ongoingCourses = userData.progresses.filter(p => !p.isCompleted && p.course).map(p => {
+      const c = p.course;
+      c._id = c.id;
+      return c;
+    });
+
+    if (userData.publishedCourses) {
+      userData.publishedCourses = userData.publishedCourses.map(c => {
+        c._id = c.id;
+        return c;
+      });
+    }
+
+    // Contribution graph data
+    const contributionMap = {};
+    if (userData.activities) {
+      userData.activities.forEach(act => {
+        if (!contributionMap[act.date]) {
+          contributionMap[act.date] = 0;
+        }
+        contributionMap[act.date]++;
+      });
+    }
+
+    res.json({
+      ...userData,
+      completedCourses,
+      ongoingCourses,
+      contributions: contributionMap
+    });
+
+  } catch (error) {
+    console.error('Get profile error:', error);
+    res.status(500).json({ message: 'Sunucu hatası' });
+  }
+});
+
 
 module.exports = router;

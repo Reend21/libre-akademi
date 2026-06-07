@@ -3,6 +3,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { usersApi } from '../api/users'
+import { coursesApi } from '../api/courses'
 
 const authStore = useAuthStore()
 const route = useRoute()
@@ -10,6 +11,7 @@ const router = useRouter()
 
 const loading = ref(true)
 const profileData = ref(null)
+const watchlistCourses = ref([])
 
 const isCurrentUser = computed(() => {
   return authStore.user && authStore.user.username === route.params.username
@@ -25,6 +27,14 @@ const fetchProfile = async () => {
   try {
     const data = await usersApi.getUserProfile(route.params.username)
     profileData.value = data
+    
+    if (isCurrentUser.value) {
+      const stored = JSON.parse(localStorage.getItem('libre_watchlist') || '[]')
+      if (stored.length > 0) {
+        const allCourses = await coursesApi.getAllCourses()
+        watchlistCourses.value = allCourses.filter(c => stored.includes(c._id || c.id))
+      }
+    }
   } catch (err) {
     console.error('Profil yüklenirken hata:', err)
     profileData.value = null
@@ -78,7 +88,7 @@ const genderLabel = computed(() => {
           <div class="avatar-wrapper">
              <img v-if="profileData.avatar" :src="profileData.avatar" :alt="profileData.name" class="profile-avatar shadow" />
              <div v-else class="profile-avatar-placeholder shadow">
-               {{ profileData.name ? profileData.name.charAt(0) : '?' }}
+               <i class="bi bi-star-fill" style="font-size: 4rem;"></i>
              </div>
           </div>
           <div class="profile-info">
@@ -99,7 +109,7 @@ const genderLabel = computed(() => {
             <div class="profile-bio-box">
               <p class="profile-bio">{{ profileData.bio || 'Henüz bir açıklama eklenmemiş.' }}</p>
             </div>
-            <RouterLink v-if="isCurrentUser" to="/profile/edit" class="edit-profile-btn btn btn-sm">
+            <RouterLink v-if="isCurrentUser" to="/profile/edit" class="edit-profile-btn btn-primary">
               <i class="bi bi-pencil-square"></i> Profili Düzenle
             </RouterLink>
           </div>
@@ -146,6 +156,7 @@ const genderLabel = computed(() => {
               </div>
             </div>
             <div v-else class="empty-state-mini">
+              <i class="bi bi-play-circle" style="font-size:2rem; opacity:0.5;"></i>
               <p>Devam eden kurs yok.</p>
             </div>
           </section>
@@ -160,10 +171,40 @@ const genderLabel = computed(() => {
               </div>
             </div>
             <div v-else class="empty-state-mini">
+              <i class="bi bi-award" style="font-size:2rem; opacity:0.5;"></i>
               <p>Tamamlanan kurs yok.</p>
             </div>
           </section>
         </div>
+
+        <!-- Watchlist (Only for current user) -->
+        <section v-if="isCurrentUser" class="courses-section glass mt-8">
+          <h3><i class="bi bi-bookmark-heart-fill"></i> İzleme Listem</h3>
+          <div class="course-list-simple" v-if="watchlistCourses.length">
+            <RouterLink :to="`/courses/${course.id || course._id}`" v-for="course in watchlistCourses" :key="course._id" class="simple-item" style="text-decoration:none;">
+              <i class="bi bi-bookmark-fill" style="color:var(--accent);"></i>
+              <span>{{ course.title }}</span>
+            </RouterLink>
+          </div>
+          <div v-else class="empty-state-mini">
+            <i class="bi bi-bookmark-x" style="font-size:2rem; opacity:0.5;"></i>
+            <p>İzleme listenizde kurs bulunmuyor.</p>
+          </div>
+        </section>
+
+        <!-- User Reviews -->
+        <section class="courses-section glass mt-8" v-if="profileData.reviews?.length">
+          <h3><i class="bi bi-chat-left-text-fill"></i> Değerlendirmeleri</h3>
+          <div class="review-list" style="display:flex; flex-direction:column; gap:1rem;">
+            <div v-for="review in profileData.reviews" :key="review.id" class="review-item" style="background:var(--bg-primary); padding:1rem; border-radius:8px; border:1px solid var(--border-color);">
+              <div class="review-header" style="display:flex; justify-content:space-between; margin-bottom:0.5rem;">
+                <strong><RouterLink :to="`/courses/${review.course?.id}`" style="color:var(--accent);">{{ review.course?.title }}</RouterLink> {{ review.lesson ? `(${review.lesson.title})` : '' }}</strong>
+                <span class="stars"><i v-for="i in 5" :key="i" class="bi" :class="i <= review.rating ? 'bi-star-fill' : 'bi-star'"></i></span>
+              </div>
+              <p style="color:var(--text-secondary); margin:0;">{{ review.comment }}</p>
+            </div>
+          </div>
+        </section>
 
         <!-- Contributions Graph -->
         <section class="courses-section glass mt-8">
@@ -205,14 +246,14 @@ const genderLabel = computed(() => {
 
 <style scoped>
 .profile-view-container {
-  padding: 4rem 1rem;
+  padding: 3rem 1rem;
   min-height: 80vh;
 }
 
 .profile-grid {
   display: grid;
-  grid-template-columns: 320px 1fr;
-  gap: 2.5rem;
+  grid-template-columns: 350px 1fr;
+  gap: 2rem;
   align-items: start;
 }
 
@@ -224,10 +265,11 @@ const genderLabel = computed(() => {
 
 .glass {
   background: var(--bg-card);
-  backdrop-filter: blur(12px);
+  backdrop-filter: blur(16px);
   border: 1px solid var(--border-color);
-  border-radius: 20px;
-  padding: 2rem;
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.1);
 }
 
 /* Sidebar Styling */
@@ -339,6 +381,11 @@ const genderLabel = computed(() => {
 
 .edit-profile-btn {
   width: 100%;
+  justify-content: center;
+  padding: 0.8rem;
+  font-size: 1rem;
+  border-radius: 10px;
+  margin-top: 1rem;
 }
 
 /* Main Content Styling */
@@ -368,36 +415,45 @@ const genderLabel = computed(() => {
 
 .course-list {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 1rem;
 }
 
 .course-mini-card {
   display: flex;
-  gap: 1rem;
+  gap: 0.75rem;
   background: var(--bg-primary);
-  padding: 1rem;
-  border-radius: 12px;
+  padding: 0.75rem;
+  border-radius: 10px;
   border: 1px solid var(--border-color);
   transition: all 0.2s;
+  align-items: center;
 }
 
 .course-mini-card:hover {
-  transform: translateX(5px);
+  transform: translateY(-3px);
   border-color: var(--accent);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
 .course-mini-card img {
-  width: 80px;
-  height: 60px;
-  border-radius: 8px;
+  width: 70px;
+  height: 50px;
+  border-radius: 6px;
   object-fit: cover;
 }
 
+.mini-info {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
 .mini-info h4 {
-  font-size: 1rem;
-  margin-bottom: 0.25rem;
+  font-size: 0.95rem;
+  margin-bottom: 0.2rem;
   color: var(--text-primary);
+  line-height: 1.2;
 }
 
 .mini-meta {
